@@ -1,0 +1,57 @@
+name: Build installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout build repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Prepare app sources
+        shell: pwsh
+        env:
+          BUILD_REPO_READ_TOKEN: ${{ secrets.BUILD_REPO_READ_TOKEN }}
+        run: |
+          .\scripts\prepare_apps.ps1
+
+      - name: Build shared PyInstaller bundle
+        shell: cmd
+        run: |
+          call build_all_shared.bat all
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Build per-user installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" .\Setup_turbinado.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: FerramentasCompartilhadas-Setup
+          path: Output\*.exe
+          if-no-files-found: error
+
+      - name: Upload raw bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: FerramentasCompartilhadas-portable
+          path: dist\FerramentasCompartilhadas\
+          if-no-files-found: error
