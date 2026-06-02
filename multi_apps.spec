@@ -86,7 +86,7 @@ CAPEX_WEB_FRONTEND_DIR = os.path.join(CAPEX_WEB_DIR, "frontend")
 # Entry point frozen do Capex web: unblock MOTW, reaponta WEB_DIR/INDEX_HTML
 # pra _MEIPASS/web e move config.json/scenarios.json pra %LOCALAPPDATA%.
 CAPEX_WEB_LAUNCHER = os.path.join(CAPEX_DIR, "_nina_ceo", "builds", "capex_web_launcher.py")
-STATUS_DIR     = os.path.join(APPS_DIR, "status_medicao")
+STATUS_DIR     = os.path.join(APPS_DIR, "status_medicoes")
 CADASTRO_DIR   = os.path.join(APPS_DIR, "cadastro_viabilidades")
 CADASTRO_WEB_DIR = os.path.join(CADASTRO_DIR, "main_web")
 
