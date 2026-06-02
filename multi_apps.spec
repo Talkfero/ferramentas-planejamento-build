@@ -19,7 +19,7 @@ Saida:
 import glob
 import os
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 
 # =====================================================================
@@ -173,7 +173,7 @@ COMMON_EXCLUDES = [
     "matplotlib.backends.backend_tkagg",
     "matplotlib.backends.backend_gtk3agg",
     "matplotlib.backends.backend_wxagg",
-    "pytest", "unittest", "doctest", "pydoc",
+    "pytest", "doctest", "pydoc",
     "PySide6.QtWebEngineCore",
     "PySide6.QtWebEngineWidgets",
     "PySide6.QtWebEngineQuick",
@@ -186,7 +186,7 @@ WEB_EXCLUDES = [
     "matplotlib.backends.backend_tkagg",
     "matplotlib.backends.backend_gtk3agg",
     "matplotlib.backends.backend_wxagg",
-    "pytest", "unittest", "doctest", "pydoc",
+    "pytest", "doctest", "pydoc",
 ]
 
 
@@ -211,6 +211,16 @@ def _collect_all_safe(*pkgs):
     return datas, binaries, hiddenimports
 
 
+def _collect_submodules_safe(*pkgs):
+    hiddenimports = []
+    for pkg in pkgs:
+        try:
+            hiddenimports += collect_submodules(pkg)
+        except Exception as exc:
+            print(f"[multi_apps.spec] collect_submodules({pkg!r}) falhou: {exc}")
+    return hiddenimports
+
+
 # pywebview + backend .NET (Windows EdgeChromium/WebView2). Necessario
 # para os TRES apps web (coplan_web, capex, cadastro).
 WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
@@ -221,7 +231,53 @@ WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
 # e matplotlib precisa do mpl-data. matplotlib e' lazy-import em
 # buildup_pptx (regra "enxugar deps"); o hook embutido coleta o mpl-data
 # quando 'matplotlib' esta no grafo (hiddenimports abaixo).
-CAPEX_EXTRA_DATAS, CAPEX_EXTRA_BINARIES, CAPEX_EXTRA_HIDDEN = _collect_all_safe("pptx")
+CAPEX_EXTRA_DATAS, CAPEX_EXTRA_BINARIES, CAPEX_EXTRA_HIDDEN = _collect_all_safe(
+    "pptx", "matplotlib", "pyparsing"
+)
+
+COPLAN_INTERNAL_HIDDEN = _collect_submodules_safe(
+    "backend", "core", "runtime", "shared"
+)
+
+CADASTRO_INTERNAL_HIDDEN = [
+    "local_server",
+    "webview_shim",
+    "mw_backup",
+    "mw_base",
+    "mw_config",
+    "mw_db",
+    "mw_despacho",
+    "mw_email",
+    "mw_feriados",
+    "mw_layout",
+    "mw_lock",
+    "mw_mapatermico",
+    "mw_notas",
+    "mw_obras",
+    "mw_pathwrite",
+    "mw_prazos",
+    "mw_reservas",
+    "mw_resolve",
+    "mw_schema",
+    "mw_sources",
+    "mw_text",
+    "mw_validacao",
+    "api_config_visual",
+    "api_demandas",
+    "api_despacho",
+    "api_email",
+    "api_excel",
+    "api_fontes",
+    "api_mapa_termico",
+    "api_notif",
+    "api_obras",
+    "api_oracle",
+    "api_primeira_medida",
+    "api_relatorios",
+    "api_reservas",
+    "api_sistema",
+    "api_viabilidades",
+]
 
 
 # =====================================================================
@@ -441,7 +497,7 @@ if _want('coplan_web'):
             "backend.domains.nota_colapso",
             "backend.domains.cenarios",
             "backend.domains.validacoes",
-        ] + WEBVIEW_HIDDEN,
+        ] + WEBVIEW_HIDDEN + COPLAN_INTERNAL_HIDDEN,
         excludes=WEB_EXCLUDES,
         cipher=block_cipher,
     )
@@ -493,7 +549,7 @@ if _want('capex'):
         excludes=[
             "tkinter", "_tkinter", "tcl",
             "PyQt5", "PyQt6", "PySide6",
-            "pytest", "unittest", "doctest", "pydoc",
+            "pytest", "doctest", "pydoc",
         ],
         cipher=block_cipher,
     )
@@ -505,7 +561,7 @@ if _want('status'):
     status_entry = os.path.join(STATUS_DIR, "status_medicao.py")
     status_icon = os.path.join(STATUS_DIR, "Status.ico")
     if not os.path.isfile(status_icon):
-        status_icon = None
+        status_icon = os.path.join(LAUNCHER_DIR, "eng.ico")
     a = Analysis(
         [status_entry],
         pathex=[ROOT, STATUS_DIR],
@@ -533,8 +589,14 @@ if _want('cadastro'):
         hiddenimports=[
             "webview",
             "pandas", "openpyxl", "sqlite3",
-        ] + WEBVIEW_HIDDEN,
-        excludes=WEB_EXCLUDES,
+        ] + WEBVIEW_HIDDEN + CADASTRO_INTERNAL_HIDDEN,
+        excludes=[
+            "PyQt5", "PyQt6", "PySide6",
+            "matplotlib.backends.backend_tkagg",
+            "matplotlib.backends.backend_gtk3agg",
+            "matplotlib.backends.backend_wxagg",
+            "pytest", "doctest", "pydoc",
+        ],
         cipher=block_cipher,
     )
     _analyses.append(a)

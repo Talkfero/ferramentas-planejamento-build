@@ -233,7 +233,7 @@ if /I "!K!"=="cadastro"   set "REQ=apps\cadastro_viabilidades\main_web\requireme
 if /I "!K!"=="elexplan"   set "PKGS=PySide6"
 if /I "!K!"=="imagedx"    set "PKGS=PySide6"
 if /I "!K!"=="status"     set "PKGS=PySide6"
-if /I "!K!"=="unif"       set "PKGS=PySide6 chardet openpyxl"
+if /I "!K!"=="unif"       set "PKGS=PySide6 chardet openpyxl pandas polars fastexcel qtawesome"
 
 if defined REQ  goto install_req
 if defined PKGS goto install_pkgs
