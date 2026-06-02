@@ -2,8 +2,24 @@ name: Build installer
 
 on:
   workflow_dispatch:
+    inputs:
+      apps:
+        description: "Apps para APPS_TO_BUILD (all ou lista: launcher,elexplan,diag,imagedx,unif,coplan_web,capex,status,cadastro)"
+        required: false
+        default: "all"
   push:
-    branches: [main]
+    branches: [main, master]
+    paths:
+      - "multi_apps.spec"
+      - "build_all_shared.bat"
+      - "Setup_turbinado.iss"
+      - "build_gui.py"
+      - "scripts/**"
+      - "app_configs/**"
+      - ".github/workflows/build-installer.yml"
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -17,19 +33,29 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Prepare app sources
         shell: pwsh
         env:
           BUILD_REPO_READ_TOKEN: ${{ secrets.BUILD_REPO_READ_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           .\scripts\prepare_apps.ps1
+          python .\scripts\validate_layout.py --apps "${{ github.event.inputs.apps || 'all' }}"
 
       - name: Build shared PyInstaller bundle
         shell: cmd
+        env:
+          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
-          call build_all_shared.bat all
+          call build_all_shared.bat %APPS_TO_BUILD%
+
+      - name: Finalize bundle runtime configs
+        shell: pwsh
+        run: |
+          .\scripts\finalize_bundle.ps1
 
       - name: Install Inno Setup
         shell: pwsh

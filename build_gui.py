@@ -78,7 +78,7 @@ APPS: List[AppDef] = [
     AppDef("coplan_web", "Coplan Web",
            "Cadastro de obras (pywebview)",
            "apps/coplan/main_web.py",
-           "apps/coplan/cadastro-de-obras.ico"),
+           "apps/coplan/frontend/assets/cadastro-de-obras.ico"),
     AppDef("capex", "Ambiente Capex",
            "Controle de CAPEX (pywebview)",
            "apps/capex/web/main_web.py",

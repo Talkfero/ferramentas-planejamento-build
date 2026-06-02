@@ -86,7 +86,7 @@ CAPEX_WEB_FRONTEND_DIR = os.path.join(CAPEX_WEB_DIR, "frontend")
 # Entry point frozen do Capex web: unblock MOTW, reaponta WEB_DIR/INDEX_HTML
 # pra _MEIPASS/web e move config.json/scenarios.json pra %LOCALAPPDATA%.
 CAPEX_WEB_LAUNCHER = os.path.join(CAPEX_DIR, "_nina_ceo", "builds", "capex_web_launcher.py")
-STATUS_DIR     = os.path.join(APPS_DIR, "status_medicoes")
+STATUS_DIR     = os.path.join(APPS_DIR, "status_medicao")
 CADASTRO_DIR   = os.path.join(APPS_DIR, "cadastro_viabilidades")
 CADASTRO_WEB_DIR = os.path.join(CADASTRO_DIR, "main_web")
 
@@ -447,7 +447,7 @@ if _want('coplan_web'):
     )
     _analyses.append(a)
     _exes.append(_mk_exe(a, "Coplan Web",
-                         os.path.join(COPLAN_DIR, "cadastro-de-obras.ico")))
+                         os.path.join(COPLAN_FRONTEND_DIR, "assets", "cadastro-de-obras.ico")))
 
 if _want('capex'):
     # Capex web (pywebview): substitui o desktop PySide6 (codigo6_ambiente

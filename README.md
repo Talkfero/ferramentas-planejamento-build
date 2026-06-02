@@ -18,7 +18,7 @@ administrador do usuario final.
 
 ## Como gerar
 
-1. Configure o secret `BUILD_REPO_READ_TOKEN` com permissao de leitura nos repos privados `Talkfero/*`.
+1. Configure o secret `BUILD_REPO_READ_TOKEN` ou `GH_PAT` com permissao de leitura nos repos privados `Talkfero/*`.
 2. Rode o workflow `Build installer` manualmente no GitHub Actions.
 3. Baixe o artefato `FerramentasCompartilhadas-Setup`.
 
@@ -30,6 +30,7 @@ locais versionados aqui (`imagedx` e `unificador`).
 ```bat
 set BUILD_REPO_READ_TOKEN=<token-com-acesso-aos-repos>
 powershell -ExecutionPolicy Bypass -File scripts\prepare_apps.ps1
+python scripts\validate_layout.py --apps all
 build_all_shared.bat all
 ISCC Setup_turbinado.iss
 ```
