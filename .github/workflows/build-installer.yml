@@ -64,8 +64,18 @@ jobs:
 
       - name: Build per-user installer
         shell: pwsh
+        env:
+          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" .\Setup_turbinado.iss
+          $apps = ($env:APPS_TO_BUILD ?? "all").Trim().ToLower()
+          $args = @(".\Setup_turbinado.iss")
+          if ($apps -and $apps -ne "all") {
+            if ($apps.Contains(",") -or $apps.Contains(";")) {
+              throw "Setup_turbinado.iss suporta instalador parcial de apenas um app por vez. Use apps=all ou uma unica chave."
+            }
+            $args = @("/DAPP_ONLY=$apps", ".\Setup_turbinado.iss")
+          }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" @args
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
