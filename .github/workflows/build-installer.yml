@@ -57,6 +57,11 @@ jobs:
         run: |
           .\scripts\finalize_bundle.ps1
 
+      - name: Validate pywebview runtime bundle
+        shell: pwsh
+        run: |
+          .\scripts\validate_runtime_bundle.ps1 -Apps "${{ github.event.inputs.apps || 'all' }}"
+
       - name: Install Inno Setup
         shell: pwsh
         run: |
