@@ -224,12 +224,22 @@ rem ================================================================
 :install_for
 set "K=%~1"
 set "REQ="
+set "REQ_EXTRA="
 set "PKGS="
 if /I "!K!"=="launcher"   set "REQ=apps\launcher\requirements.txt"
 if /I "!K!"=="diag"       set "REQ=apps\diagnostico\requirements.txt"
-if /I "!K!"=="coplan_web" set "REQ=apps\coplan\requirements-web.txt"
-if /I "!K!"=="capex"      set "REQ=apps\capex\web\requirements-web.txt"
-if /I "!K!"=="cadastro"   set "REQ=apps\cadastro_viabilidades\main_web\requirements-web.txt"
+if /I "!K!"=="coplan_web" (
+  set "REQ=apps\coplan\requirements-web.txt"
+  set "REQ_EXTRA=apps\coplan\scripts\build\requirements-build.txt"
+)
+if /I "!K!"=="capex" (
+  set "REQ=apps\capex\web\requirements-web.txt"
+  set "PKGS=pythonnet clr_loader"
+)
+if /I "!K!"=="cadastro" (
+  set "REQ=apps\cadastro_viabilidades\main_web\requirements-web.txt"
+  set "PKGS=pythonnet clr_loader"
+)
 if /I "!K!"=="elexplan"   set "PKGS=PySide6"
 if /I "!K!"=="imagedx"    set "PKGS=PySide6"
 if /I "!K!"=="status"     set "PKGS=PySide6"
@@ -249,6 +259,17 @@ if not exist "!REQ!" (
 echo   [!K!] pip install -r !REQ!
 python -m pip install -r "!REQ!"
 if errorlevel 1 set "DEP_FAIL=1"
+if defined REQ_EXTRA (
+  if not exist "!REQ_EXTRA!" (
+    echo   [!K!] [aviso] requirements extra ausente: !REQ_EXTRA!
+    set "DEP_FAIL=1"
+    goto :eof
+  )
+  echo   [!K!] pip install -r !REQ_EXTRA!
+  python -m pip install -r "!REQ_EXTRA!"
+  if errorlevel 1 set "DEP_FAIL=1"
+)
+if defined PKGS goto install_pkgs
 goto :eof
 
 :install_pkgs

@@ -108,6 +108,9 @@ APP_REQ_FILES = {
     "cadastro":   "apps/cadastro_viabilidades/main_web/requirements-web.txt",
 }
 APP_REQ_PKGS = {
+    "coplan_web": ["pythonnet", "clr_loader"],
+    "capex": ["pythonnet", "clr_loader"],
+    "cadastro": ["pythonnet", "clr_loader"],
     "elexplan": ["PySide6"],
     "imagedx":  ["PySide6"],
     "status":   ["PySide6"],
