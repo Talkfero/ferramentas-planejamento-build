@@ -18,6 +18,7 @@ Saida:
 
 import glob
 import os
+import sys
 
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
@@ -211,14 +212,35 @@ def _collect_all_safe(*pkgs):
     return datas, binaries, hiddenimports
 
 
-def _collect_submodules_safe(*pkgs):
-    hiddenimports = []
-    for pkg in pkgs:
-        try:
-            hiddenimports += collect_submodules(pkg)
-        except Exception as exc:
-            print(f"[multi_apps.spec] collect_submodules({pkg!r}) falhou: {exc}")
-    return hiddenimports
+def _collect_submodules_safe(*pkgs, extra_paths=()):
+    """collect_submodules de cada pkg, tolerando ausencia.
+
+    ``extra_paths`` sao inseridos TEMPORARIAMENTE no inicio do sys.path
+    durante a coleta. Necessario porque os pacotes do Coplan
+    (backend/core/runtime/shared) moram em apps/coplan/ -- nao na raiz onde
+    o PyInstaller roda o spec. Sem isso, collect_submodules nao encontra
+    esses pacotes no parse, cai no except e retorna [] (rede de seguranca
+    vazia), deixando modulos lazy fora do bundle -> "DatabaseManager
+    indisponivel" no runtime. O sys.path e' restaurado no finally.
+    """
+    added = [p for p in extra_paths
+             if p and p not in sys.path and os.path.isdir(p)]
+    for p in added:
+        sys.path.insert(0, p)
+    try:
+        hiddenimports = []
+        for pkg in pkgs:
+            try:
+                hiddenimports += collect_submodules(pkg)
+            except Exception as exc:
+                print(f"[multi_apps.spec] collect_submodules({pkg!r}) falhou: {exc}")
+        return hiddenimports
+    finally:
+        for p in added:
+            try:
+                sys.path.remove(p)
+            except ValueError:
+                pass
 
 
 # pywebview + backend .NET (Windows EdgeChromium/WebView2). Necessario
@@ -235,8 +257,17 @@ CAPEX_EXTRA_DATAS, CAPEX_EXTRA_BINARIES, CAPEX_EXTRA_HIDDEN = _collect_all_safe(
     "pptx", "matplotlib", "pyparsing"
 )
 
+# COPLAN_DIR no path para a coleta achar backend/core/runtime/shared do
+# Coplan (vivem em apps/coplan/, nao na raiz). Forca TODO submodulo desses
+# pacotes como hiddenimport -- blinda contra imports lazy (core.exceptions,
+# core.services.apoio_service, core.repositories.excel_cache, shared.*) que a
+# analise estatica do PyInstaller nao segue de dentro de metodos.
 COPLAN_INTERNAL_HIDDEN = _collect_submodules_safe(
-    "backend", "core", "runtime", "shared"
+    "backend", "core", "runtime", "shared", extra_paths=[COPLAN_DIR]
+)
+print(
+    f"[multi_apps.spec] COPLAN_INTERNAL_HIDDEN: "
+    f"{len(COPLAN_INTERNAL_HIDDEN)} submodulos coletados"
 )
 
 CADASTRO_INTERNAL_HIDDEN = [
@@ -513,7 +544,9 @@ if _want('coplan_web'):
             "core.repositories.obra_read_repo",
             "core.repositories.obra_query_repo",
             "core.repositories.obra_sql_helpers",
+            "core.repositories.excel_cache",
             "core.services.atualizar_obra_service",
+            "core.services.apoio_service",
             "core.services.nota_colapso_service",
             "core.services.obra_rules",
             "core.services.pi_metadata_service",
@@ -521,6 +554,13 @@ if _want('coplan_web'):
             "core.services.resumo_service",
             "core.services.row_helpers",
             "core.services.salvar_obra_service",
+            # Imports lazy (dentro de metodos) que a analise estatica do
+            # PyInstaller nao seguia -- carregados no boot por _ensure_managers
+            # (apoio/calc) e pelo grafo de runtime.*. Sem eles: import falha
+            # no .exe -> "DatabaseManager indisponivel".
+            "core.exceptions",
+            "core.models",
+            "shared.texto_utils",
         ] + WEBVIEW_HIDDEN + COPLAN_INTERNAL_HIDDEN,
         excludes=WEB_EXCLUDES,
         cipher=block_cipher,
