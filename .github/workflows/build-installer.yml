@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       apps:
-        description: "Apps para APPS_TO_BUILD (all ou lista: launcher,elexplan,diag,imagedx,unif,coplan_web,capex,status,cadastro)"
+        description: "Instalador a gerar: all ou uma chave unica (launcher,elexplan,diag,imagedx,unif,coplan_web,capex,status,cadastro)"
         required: false
         default: "all"
   push:
@@ -44,12 +44,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           .\scripts\prepare_apps.ps1
-          python .\scripts\validate_layout.py --apps "${{ github.event.inputs.apps || 'all' }}"
+          python .\scripts\validate_layout.py --apps all
 
       - name: Build shared PyInstaller bundle
         shell: cmd
         env:
-          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
+          APPS_TO_BUILD: all
         run: |
           call build_all_shared.bat %APPS_TO_BUILD%
 
@@ -61,7 +61,7 @@ jobs:
       - name: Validate pywebview runtime bundle
         shell: pwsh
         run: |
-          .\scripts\validate_runtime_bundle.ps1 -Apps "${{ github.event.inputs.apps || 'all' }}"
+          .\scripts\validate_runtime_bundle.ps1 -Apps all
 
       - name: Install Inno Setup
         shell: pwsh
@@ -71,9 +71,9 @@ jobs:
       - name: Build per-user installer
         shell: pwsh
         env:
-          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
+          INSTALLER_APP: ${{ github.event.inputs.apps || 'all' }}
         run: |
-          $apps = ($env:APPS_TO_BUILD ?? "all").Trim().ToLower()
+          $apps = ($env:INSTALLER_APP ?? "all").Trim().ToLower()
           $args = @(".\Setup_turbinado.iss")
           if ($apps -and $apps -ne "all") {
             if ($apps.Contains(",") -or $apps.Contains(";")) {
@@ -101,7 +101,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: latest
-          APPS: ${{ github.event.inputs.apps || 'all' }}
+          INSTALLER_APP: ${{ github.event.inputs.apps || 'all' }}
+          BUNDLE_APPS: all
           COMMIT_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -113,7 +114,7 @@ jobs:
             gh release delete $r.tagName --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
           }
           $assets = Get-ChildItem release\* | ForEach-Object { $_.FullName }
-          $notes = "Build automatico do instalador. Apps: $($env:APPS). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
+          $notes = "Build automatico do instalador. Instalador: $($env:INSTALLER_APP). Runtime/bundle: $($env:BUNDLE_APPS). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
           $ghArgs = @('release','create',$env:RELEASE_TAG) + $assets + @('--repo',$env:GITHUB_REPOSITORY,'--target',$env:COMMIT_SHA,'--title','Ferramentas de Planejamento - ultimo build','--notes',$notes,'--latest')
           gh @ghArgs
           Write-Host "Release publicada: https://github.com/$($env:GITHUB_REPOSITORY)/releases/tag/$($env:RELEASE_TAG)"
