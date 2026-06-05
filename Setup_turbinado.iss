@@ -225,7 +225,11 @@ Name: "app_cadastro";   Description: "Sistema de Cadastro (pywebview)";  Types: 
 Name: "desktopicon"; Description: "Criar atalho na Area de Trabalho (launcher)"; GroupDescription: "Atalhos:"; Flags: unchecked
 Name: "runafter";    Description: "Abrir apos concluir"; Flags: unchecked
 
+#if IncludeAll
 Name: "clean_previous";  Description: "Remover instalacao anterior antes de instalar"; GroupDescription: "Limpeza:"; Check: HasPreviousInstall
+#else
+Name: "clean_previous";  Description: "Atualizar runtime e remover somente arquivos antigos do app selecionado"; GroupDescription: "Limpeza:"; Check: HasPreviousInstall
+#endif
 Name: "clean_user_json"; Description: "Tambem remover arquivos .json de configuracao do usuario ({app}/AppData)"; GroupDescription: "Limpeza:"; Flags: unchecked; Check: HasUserJsonToClean
 
 [Dirs]
@@ -436,10 +440,37 @@ begin
   end;
 end;
 
+procedure DeleteFileIfExists(const Full: string);
+begin
+  if not FileExists(Full) then Exit;
+  try
+    if not DeleteFile(Full) then
+      Log(LogPrefix + 'Falha ao remover: ' + Full);
+  except
+    Log(LogPrefix + 'Excecao ao remover: ' + Full);
+  end;
+end;
+
+procedure RemoveSelectedAppJsonInApp(const AppDir: string);
+begin
+#if WantLauncher
+  DeleteFileIfExists(AppDir + '\config_launcher.json');
+#endif
+
+#if WantDiag
+  // Diagnostico ainda grava config.json ao lado do executavel.
+  DeleteFileIfExists(AppDir + '\config.json');
+#endif
+end;
+
 procedure RemoveKnownUserJson();
 begin
   // Apps desktop antigos/launcher ainda gravam JSON ao lado do executavel.
+#if IncludeAll
   RemoveAllJsonIn(ExpandConstant('{app}'));
+#else
+  RemoveSelectedAppJsonInApp(ExpandConstant('{app}'));
+#endif
 
 #if WantCadastro
   // Sistema de Cadastro em modo PyInstaller grava config/logs por usuario.
@@ -514,8 +545,55 @@ begin
   end;
 end;
 
-// Remove _internal + todos os .exe soltos. Preserva .json
-// a menos que RemoveJson = True.
+procedure CleanSelectedAppFiles(const AppDir: string; const RemoveJson: Boolean);
+begin
+#if WantLauncher
+  DeleteFileIfExists(AppDir + '\Ferramentas de Planejamento.exe');
+#endif
+
+#if WantElexplan
+  DeleteFileIfExists(AppDir + '\Elexplan.exe');
+#endif
+
+#if WantDiag
+  DeleteFileIfExists(AppDir + '\Diagnostico de alimentadores.exe');
+#endif
+
+#if WantImageDx
+  DeleteFileIfExists(AppDir + '\ImageDx- Detalhamento.exe');
+#endif
+
+#if WantUnif
+  DeleteFileIfExists(AppDir + '\Unificador de arquivos.exe');
+#endif
+
+#if WantCoplanWeb
+  DeleteFileIfExists(AppDir + '\Coplan Web.exe');
+  DeleteFileIfExists(AppDir + '\Coplan Web.exe.config');
+  DeleteFileIfExists(AppDir + '\Coplan.exe');
+#endif
+
+#if WantCapex
+  DeleteFileIfExists(AppDir + '\Ambiente Capex.exe');
+  DeleteFileIfExists(AppDir + '\Ambiente Capex.exe.config');
+#endif
+
+#if WantStatus
+  DeleteFileIfExists(AppDir + '\Status de medicao.exe');
+#endif
+
+#if WantCadastro
+  DeleteFileIfExists(AppDir + '\Sistema de Cadastro.exe');
+  DeleteFileIfExists(AppDir + '\Sistema de Cadastro.exe.config');
+#endif
+
+  if RemoveJson then
+    RemoveSelectedAppJsonInApp(AppDir);
+end;
+
+// Modo completo: remove _internal + arquivos soltos para uma instalacao
+// limpa. Modo APP_ONLY: remove _internal + somente o app selecionado,
+// preservando executaveis/configs dos outros apps ja instalados.
 procedure CleanCurrentInstall(const RemoveJson: Boolean);
 var
   AppDir, InternalDir, Full, Ext: string;
@@ -535,6 +613,9 @@ begin
     end;
   end;
 
+#if !IncludeAll
+  CleanSelectedAppFiles(AppDir, RemoveJson);
+#else
   if FindFirst(AppDir + '\*', FindRec) then
   begin
     try
@@ -562,6 +643,7 @@ begin
       FindClose(FindRec);
     end;
   end;
+#endif
 end;
 
 // ----------------------------------------------------------------
