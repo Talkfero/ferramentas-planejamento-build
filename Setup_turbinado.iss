@@ -226,7 +226,7 @@ Name: "desktopicon"; Description: "Criar atalho na Area de Trabalho (launcher)";
 Name: "runafter";    Description: "Abrir apos concluir"; Flags: unchecked
 
 Name: "clean_previous";  Description: "Remover instalacao anterior antes de instalar"; GroupDescription: "Limpeza:"; Check: HasPreviousInstall
-Name: "clean_user_json"; Description: "Tambem remover arquivos .json de configuracao em {app}"; GroupDescription: "Limpeza:"; Flags: unchecked; Check: HasUserJsonInApp
+Name: "clean_user_json"; Description: "Tambem remover arquivos .json de configuracao do usuario ({app}/AppData)"; GroupDescription: "Limpeza:"; Flags: unchecked; Check: HasUserJsonToClean
 
 [Dirs]
 Name: "{app}"; Flags: uninsalwaysuninstall
@@ -377,6 +377,38 @@ begin
   Result := HasJsonIn(ExpandConstant('{app}'));
 end;
 
+function HasUserJsonToClean(): Boolean;
+begin
+  Result := HasUserJsonInApp();
+
+#if WantCadastro
+  if not Result then
+    Result := HasJsonIn(ExpandConstant('{userappdata}\Cadastro_Viabilidades'));
+  if not Result then
+    Result := HasJsonIn(ExpandConstant('{userappdata}\Cadastro_Viabilidades\_backups'));
+#endif
+
+#if WantCoplanWeb
+  if not Result then
+    Result := HasJsonIn(ExpandConstant('{localappdata}\COPLAN\config'));
+#endif
+
+#if WantCapex
+  if not Result then
+    Result := HasJsonIn(ExpandConstant('{localappdata}\AmbienteCAPEX'));
+#endif
+
+#if WantElexplan
+  if not Result then
+    Result := HasJsonIn(ExpandConstant('{userappdata}\..\..\.elexplan'));
+#endif
+
+#if WantStatus
+  if not Result then
+    Result := HasJsonIn(ExpandConstant('{userappdata}\..\..\.statuspim'));
+#endif
+end;
+
 procedure RemoveAllJsonIn(const Dir: string);
 var
   FindRec: TFindRec;
@@ -402,6 +434,39 @@ begin
       FindClose(FindRec);
     end;
   end;
+end;
+
+procedure RemoveKnownUserJson();
+begin
+  // Apps desktop antigos/launcher ainda gravam JSON ao lado do executavel.
+  RemoveAllJsonIn(ExpandConstant('{app}'));
+
+#if WantCadastro
+  // Sistema de Cadastro em modo PyInstaller grava config/logs por usuario.
+  RemoveAllJsonIn(ExpandConstant('{userappdata}\Cadastro_Viabilidades'));
+  // Remove tambem backups rotacionados do config.json do Cadastro.
+  RemoveAllJsonIn(ExpandConstant('{userappdata}\Cadastro_Viabilidades\_backups'));
+#endif
+
+#if WantCoplanWeb
+  // Coplan Web grava config.json em %LOCALAPPDATA%\COPLAN\config.
+  RemoveAllJsonIn(ExpandConstant('{localappdata}\COPLAN\config'));
+#endif
+
+#if WantCapex
+  // Ambiente CAPEX grava config.json/scenarios.json em %LOCALAPPDATA%\AmbienteCAPEX.
+  RemoveAllJsonIn(ExpandConstant('{localappdata}\AmbienteCAPEX'));
+#endif
+
+#if WantElexplan
+  // Elexplan usa Path.home()\.elexplan\prefs.json.
+  RemoveAllJsonIn(ExpandConstant('{userappdata}\..\..\.elexplan'));
+#endif
+
+#if WantStatus
+  // Status de medicao usa Path.home()\.statuspim\prefs.json.
+  RemoveAllJsonIn(ExpandConstant('{userappdata}\..\..\.statuspim'));
+#endif
 end;
 
 // Remove layout antigo (pasta Ferramentas\<AppName>\) que o instalador
@@ -628,6 +693,9 @@ begin
 
     if WizardIsTaskSelected('clean_previous') then
       CleanCurrentInstall(WizardIsTaskSelected('clean_user_json'));
+
+    if WizardIsTaskSelected('clean_user_json') then
+      RemoveKnownUserJson();
   end;
 end;
 
