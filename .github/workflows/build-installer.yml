@@ -19,7 +19,8 @@ on:
       - ".github/workflows/build-installer.yml"
 
 permissions:
-  contents: read
+  contents: write
+  actions: write
 
 jobs:
   build:
@@ -82,16 +83,51 @@ jobs:
           }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" @args
 
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: FerramentasCompartilhadas-Setup
-          path: Output\*.exe
-          if-no-files-found: error
+      - name: Package release assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          $installer = Get-ChildItem -Path Output\*.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installer) { throw "Instalador .exe nao encontrado em Output\" }
+          Copy-Item $installer.FullName -Destination release\ -Force
+          Write-Host "Instalador: $($installer.Name)"
+          if (Test-Path dist\FerramentasCompartilhadas) {
+            Compress-Archive -Path dist\FerramentasCompartilhadas\* -DestinationPath release\FerramentasCompartilhadas-portable.zip -Force
+          }
 
-      - name: Upload raw bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: FerramentasCompartilhadas-portable
-          path: dist\FerramentasCompartilhadas\
-          if-no-files-found: error
+      - name: Publish rolling release (replaces previous)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: latest
+          APPS: ${{ github.event.inputs.apps || 'all' }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          # Apaga TODAS as releases existentes para manter somente a mais nova
+          $old = gh release list --repo $env:GITHUB_REPOSITORY --limit 200 --json tagName | ConvertFrom-Json
+          foreach ($r in $old) {
+            Write-Host "Removendo release antiga: $($r.tagName)"
+            gh release delete $r.tagName --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
+          }
+          $assets = Get-ChildItem release\* | ForEach-Object { $_.FullName }
+          $notes = "Build automatico do instalador. Apps: $($env:APPS). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
+          $ghArgs = @('release','create',$env:RELEASE_TAG) + $assets + @('--repo',$env:GITHUB_REPOSITORY,'--target',$env:COMMIT_SHA,'--title','Ferramentas de Planejamento - ultimo build','--notes',$notes,'--latest')
+          gh @ghArgs
+          Write-Host "Release publicada: https://github.com/$($env:GITHUB_REPOSITORY)/releases/tag/$($env:RELEASE_TAG)"
+
+      - name: Cleanup old workflow artifacts
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ids = gh api --paginate "repos/$($env:GITHUB_REPOSITORY)/actions/artifacts" --jq ".artifacts[].id"
+          foreach ($id in $ids) {
+            if ("$id".Trim()) {
+              Write-Host "Apagando artifact $id"
+              gh api -X DELETE "repos/$($env:GITHUB_REPOSITORY)/actions/artifacts/$id" 2>$null
+            }
+          }

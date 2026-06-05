@@ -20,7 +20,12 @@ administrador do usuario final.
 
 1. Configure o secret `BUILD_REPO_READ_TOKEN` ou `GH_PAT` com permissao de leitura nos repos privados `Talkfero/*`.
 2. Rode o workflow `Build installer` manualmente no GitHub Actions.
-3. Baixe o artefato `FerramentasCompartilhadas-Setup`.
+3. Baixe o instalador na release mais recente em
+   [Releases](../../releases/latest) (asset `FerramentasCompartilhadas-Setup-*.exe`).
+
+Cada build publica uma unica release com a tag fixa `latest`: o workflow apaga as
+releases e os artifacts antigos e recria a release com o instalador novo, entao a
+pagina de Releases sempre tem apenas o ultimo build.
 
 O workflow monta `apps/` a partir dos repos ativos no GitHub e usa os dois apps
 locais versionados aqui (`imagedx` e `unificador`).
