@@ -17,33 +17,6 @@ $repos = @(
 
 New-Item -ItemType Directory -Force -Path $AppsRoot | Out-Null
 
-function Apply-PatchIfNeeded([string]$Target, [string]$PatchFile) {
-  if (-not (Test-Path $Target)) {
-    throw "Diretorio alvo do patch nao encontrado: $Target"
-  }
-  if (-not (Test-Path $PatchFile)) {
-    throw "Patch nao encontrado: $PatchFile"
-  }
-
-  git -C $Target apply --check $PatchFile 2>$null
-  if ($LASTEXITCODE -eq 0) {
-    Write-Host "[prepare_apps] aplicando patch: $PatchFile"
-    git -C $Target apply $PatchFile
-    if ($LASTEXITCODE -ne 0) {
-      throw "Falha ao aplicar patch: $PatchFile"
-    }
-    return
-  }
-
-  git -C $Target apply --reverse --check $PatchFile 2>$null
-  if ($LASTEXITCODE -eq 0) {
-    Write-Host "[prepare_apps] patch ja aplicado: $PatchFile"
-    return
-  }
-
-  throw "Patch incompativel com o codigo clonado: $PatchFile"
-}
-
 function Get-CloneUrl([string]$Url) {
   $token = $env:GH_PAT
   if (-not $token) { $token = $env:BUILD_REPO_READ_TOKEN }
@@ -67,7 +40,8 @@ foreach ($repo in $repos) {
   git clone --depth 1 (Get-CloneUrl $repo.Url) $target
 }
 
-$launcherPatch = Join-Path (Resolve-Path "$PSScriptRoot/..") "patches/launcher-instance-management.patch"
-Apply-PatchIfNeeded (Join-Path $AppsRoot "launcher") $launcherPatch
-
+# O controle de instancias do launcher (find/close instances + taskkill /T /F)
+# agora vive no proprio repo do launcher (app/process.py + app/main_window.py),
+# nao mais como patch aplicado aqui. Nada a aplicar: os apps vem direto da
+# branch default de cada repo clonado acima.
 Write-Host "[prepare_apps] pronto."
