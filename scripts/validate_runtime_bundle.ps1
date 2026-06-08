@@ -86,4 +86,51 @@ foreach ($key in $selectedWebApps) {
     }
 }
 
+# ---------------------------------------------------------------------------
+# Smoke-test de import do Coplan (so DLLs nao basta).
+# Roda "Coplan Web.exe" em modo self-test (COPLAN_SELFTEST=1, sem janela): o
+# launcher importa a cadeia de managers e confirma que o DatabaseManager
+# instancia. Pega "DatabaseManager indisponivel" -- um modulo Python que ficou
+# de fora do bundle do PyInstaller -- ANTES de publicar o instalador. As
+# checagens de DLL acima validam o runtime .NET/WebView2, nao o grafo de
+# modulos Python do app.
+# ---------------------------------------------------------------------------
+if ($selectedWebApps -contains "coplan_web") {
+    $coplanExe = Join-Path $Dist "Coplan Web.exe"
+    if (-not (Test-Path $coplanExe)) {
+        throw "Executavel ausente para self-test do Coplan: Coplan Web.exe"
+    }
+    $log = Join-Path ([System.IO.Path]::GetTempPath()) ("coplan_selftest_{0}.log" -f ([guid]::NewGuid().ToString("N")))
+    if (Test-Path $log) { Remove-Item $log -Force }
+
+    $env:COPLAN_SELFTEST = "1"
+    $env:COPLAN_SELFTEST_LOG = $log
+    $code = $null
+    try {
+        $proc = Start-Process -FilePath $coplanExe -PassThru -WindowStyle Hidden
+        $proc | Wait-Process -Timeout 120 -ErrorAction SilentlyContinue
+        if (-not $proc.HasExited) {
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+            throw "[validate_runtime_bundle] Coplan self-test excedeu 120s (travou ao iniciar?)."
+        }
+        $code = $proc.ExitCode
+    } finally {
+        Remove-Item Env:\COPLAN_SELFTEST -ErrorAction SilentlyContinue
+        Remove-Item Env:\COPLAN_SELFTEST_LOG -ErrorAction SilentlyContinue
+    }
+
+    # O log e' a fonte de verdade do resultado (o .exe e' windowed: o
+    # ExitCode do Start-Process as vezes vem nulo; o marcador "OK:" no log
+    # e' escrito sempre pelo launcher).
+    if (-not (Test-Path $log)) {
+        throw "[validate_runtime_bundle] Coplan self-test nao gerou log (exe nao rodou? exit=$code)."
+    }
+    $detail = (Get-Content -Raw -Encoding UTF8 $log).Trim()
+    Remove-Item $log -Force -ErrorAction SilentlyContinue
+    if ($detail -notmatch "OK:") {
+        throw "[validate_runtime_bundle] Coplan self-test FALHOU (exit=$code). $detail"
+    }
+    Write-Host "[validate_runtime_bundle] Coplan self-test OK (exit=$code). $detail"
+}
+
 Write-Host "[validate_runtime_bundle] runtime pywebview OK para: $($selectedWebApps -join ', ')"
