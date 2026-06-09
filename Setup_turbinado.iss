@@ -222,7 +222,13 @@ Name: "app_cadastro";   Description: "Sistema de Cadastro (pywebview)";  Types: 
 #endif
 
 [Tasks]
+#if IncludeAll
 Name: "desktopicon"; Description: "Criar atalho na Area de Trabalho (launcher)"; GroupDescription: "Atalhos:"; Flags: unchecked
+#else
+  #if WantCadastro
+Name: "desktopicon_cadastro"; Description: "Criar atalho na Area de Trabalho (Sistema de Cadastro)"; GroupDescription: "Atalhos:"; Flags: unchecked
+  #endif
+#endif
 Name: "runafter";    Description: "Abrir apos concluir"; Flags: unchecked
 
 #if IncludeAll
@@ -320,6 +326,9 @@ Name: "{group}\Status de medicao"; Filename: "{app}\Status de medicao.exe"; Work
 #endif
 #if WantCadastro
 Name: "{group}\Sistema de Cadastro"; Filename: "{app}\Sistema de Cadastro.exe"; WorkingDir: "{app}"; Components: {#CompCadastro}
+  #if !IncludeAll
+Name: "{userdesktop}\Sistema de Cadastro"; Filename: "{app}\Sistema de Cadastro.exe"; WorkingDir: "{app}"; Tasks: desktopicon_cadastro; Components: {#CompCadastro}
+  #endif
 #endif
 
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
@@ -327,6 +336,11 @@ Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 [Run]
 #if WantLauncher
 Filename: "{app}\Ferramentas de Planejamento.exe"; Description: "Abrir {#AppName}"; Flags: nowait postinstall skipifsilent; Tasks: runafter
+#endif
+#if WantCadastro
+  #if !IncludeAll
+Filename: "{app}\Sistema de Cadastro.exe"; Description: "Abrir Sistema de Cadastro"; Flags: nowait postinstall skipifsilent; Tasks: runafter
+  #endif
 #endif
 
 [UninstallDelete]
