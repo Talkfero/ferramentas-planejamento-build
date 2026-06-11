@@ -1,35 +1,33 @@
 # -*- coding: utf-8 -*-
 """Runtime hook (PyInstaller) dos apps pywebview (Cadastro/Coplan/Capex).
 
-Dois guardas, ambos em threads daemon:
+Dois guardas:
 
-1. Anti-zumbi: quando webview.start() retorna (todas as janelas fecharam),
-   agenda os._exit(0) apos um periodo de graca. Threads nao-daemon do
-   pythonnet/.NET costumam segurar o processo vivo sem janela ("zumbi"),
-   o que impede reabrir o app e polui o Gerenciador de Tarefas.
+1. Anti-zumbi + exit-code limpo: quando webview.start() retorna (janelas
+   fechadas), chama os._exit(0) IMEDIATAMENTE no proprio finally do wrapper
+   -- antes de qualquer shutdown do Python/.NET/pythonnet. Sem isso, o
+   cleanup do CLR (pythonnet) sobrescreve o exit code com 0xF060 (-4000),
+   que o launcher exibe como "Erro ao executar: Codigo de saida: 61536".
+   Threads nao-daemon do .NET tambem segurariam o processo como zumbi.
 
-2. Watchdog anti-congelamento: usa a MESMA checagem do Gerenciador de
-   Tarefas (user32.IsHungAppWindow). Se TODAS as janelas visiveis do
-   processo ficarem "Nao respondendo" por ~30s seguidos, o processo se
-   encerra sozinho (os._exit(86)). Sem isso, janela congelada ignora o
-   "Finalizar tarefa" da aba Processos (que e' um WM_CLOSE educado) e so
-   morre via aba Detalhes > Finalizar arvore de processos.
+2. Watchdog anti-congelamento (thread daemon): usa IsHungAppWindow, o
+   mesmo criterio do Gerenciador de Tarefas. Se TODAS as janelas visiveis
+   ficarem "Nao respondendo" por ~30s, o processo se encerra (os._exit(86)).
+   Sem isso, janela congelada ignora o "Finalizar tarefa" da aba Processos
+   (WM_CLOSE educado, nunca processado pela UI travada).
 
-Limitacao conhecida: se o congelamento for um deadlock segurando o GIL
-(ex.: chamada nativa pythonnet travada), a thread do watchdog tambem
-para de rodar e nao ha kill — nesse caso so a aba Detalhes resolve.
-O conserto definitivo do congelamento e' nos repos dos proprios apps.
+Limitacao do watchdog: deadlock segurando o GIL nao e coberto -- so a
+aba Detalhes > Finalizar arvore de processos resolve nesses casos.
+O conserto definitivo do congelamento mora nos repos dos apps.
 
-Diagnostico: eventos sao registrados em
-%LOCALAPPDATA%\\FerramentasPlanejamento\\watchdog.log.
-Para desativar (debug): defina FERRAMENTAS_DISABLE_WATCHDOG=1.
+Diagnostico: eventos em %LOCALAPPDATA%\\FerramentasPlanejamento\\watchdog.log
+Desativar (debug): FERRAMENTAS_DISABLE_WATCHDOG=1
 """
 
 import os
 import sys
 import threading
 
-_GRACE_EXIT_S = 10.0   # apos fechar as janelas, prazo p/ cleanup legitimo
 _HANG_POLL_S = 5.0     # intervalo entre checagens do watchdog
 _HANG_STRIKES = 6      # 6 x 5s => ~30s congelado => kill
 
@@ -51,7 +49,13 @@ def _log(msg):
 
 
 def _arm_anti_zombie():
-    """Forca a morte do processo depois que todas as janelas fecharem."""
+    """Garante exit code 0 e evita processo zumbi apos fechar as janelas.
+
+    Chama os._exit(0) no proprio finally do wrapper de webview.start(),
+    antes que o Python entregue o controle ao shutdown do .NET/pythonnet.
+    Esse shutdown sobrescreve o exit code com 0xF060 (61536), que o
+    launcher exibe como "Erro ao executar: Codigo de saida: 61536".
+    """
     try:
         import webview
     except Exception:
@@ -63,17 +67,11 @@ def _arm_anti_zombie():
         try:
             return orig_start(*args, **kwargs)
         finally:
-            # start() retornou => todas as janelas fecharam. Da um prazo
-            # para cleanup e mata o processo: threads .NET nao-daemon
-            # seguram um zumbi sem janela indefinidamente.
-            def _die():
-                _log("anti-zumbi: janelas fechadas ha %.0fs; os._exit(0)"
-                     % _GRACE_EXIT_S)
-                os._exit(0)
-
-            t = threading.Timer(_GRACE_EXIT_S, _die)
-            t.daemon = True
-            t.start()
+            # Janelas fechadas. os._exit() pula o shutdown Python/.NET e
+            # garante exit code 0 -- sem essa chamada o CLR sobrescreve
+            # com 0xF060/61536 durante a limpeza de threads nao-daemon.
+            _log("anti-zumbi: janelas fechadas; os._exit(0)")
+            os._exit(0)
 
     webview.start = start
 
