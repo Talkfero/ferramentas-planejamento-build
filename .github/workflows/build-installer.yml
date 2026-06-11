@@ -16,6 +16,7 @@ on:
       - "build_gui.py"
       - "scripts/**"
       - "app_configs/**"
+      - "runtime_hooks/**"
       - ".github/workflows/build-installer.yml"
 
 permissions:
