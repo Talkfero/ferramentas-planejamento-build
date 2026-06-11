@@ -94,6 +94,13 @@ CADASTRO_WEB_DIR = os.path.join(CADASTRO_DIR, "main_web")
 DIST_NAME = "FerramentasCompartilhadas"
 block_cipher = None
 
+# Runtime hook compartilhado dos apps pywebview (coplan_web/capex/cadastro):
+# anti-zumbi (os._exit apos fechar janelas) + watchdog anti-congelamento
+# (auto-kill se a janela ficar "Nao respondendo" por ~30s). Sem ele, janela
+# congelada ignora o "Finalizar tarefa" do Gerenciador e o processo zumbi
+# do pythonnet/.NET fica vivo apos fechar. Ver runtime_hooks/pyi_rth_watchdog.py.
+RUNTIME_HOOKS_WEB = [os.path.join(ROOT, "runtime_hooks", "pyi_rth_watchdog.py")]
+
 
 # =====================================================================
 # Layout esperado em apps/
@@ -504,6 +511,7 @@ if _want('coplan_web'):
         pathex=[ROOT, COPLAN_DIR],
         binaries=WEBVIEW_BINARIES,
         datas=_coplan_web_datas() + WEBVIEW_DATAS,
+        runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=[
             "webview",
             "main_web",
@@ -581,6 +589,7 @@ if _want('capex'):
         pathex=[ROOT, CAPEX_DIR],
         binaries=WEBVIEW_BINARIES + CAPEX_EXTRA_BINARIES,
         datas=_capex_web_datas() + WEBVIEW_DATAS + CAPEX_EXTRA_DATAS,
+        runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=[
             "webview",
             "pandas", "openpyxl", "sqlite3", "secrets",
@@ -650,6 +659,7 @@ if _want('cadastro'):
         pathex=[ROOT, CADASTRO_WEB_DIR],
         binaries=WEBVIEW_BINARIES,
         datas=_cadastro_datas() + WEBVIEW_DATAS,
+        runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=[
             "webview",
             "pandas", "openpyxl", "sqlite3",
