@@ -13,7 +13,7 @@ if (-not (Test-Path $Dist)) {
 
 $tokens = @()
 if ([string]::IsNullOrWhiteSpace($Apps) -or $Apps.Trim().ToLowerInvariant() -eq "all") {
-    $tokens = @("coplan_web", "capex", "cadastro")
+    $tokens = @("coplan_web", "cadastro")
 } else {
     $tokens = $Apps.ToLowerInvariant().Replace(";", ",").Split(",") |
         ForEach-Object { $_.Trim() } |
@@ -22,6 +22,8 @@ if ([string]::IsNullOrWhiteSpace($Apps) -or $Apps.Trim().ToLowerInvariant() -eq 
 
 $aliases = @{
     "coplan" = "coplan_web"
+    # Capex fundido no Coplan (capex_engine): "capex" -> coplan_web.
+    "capex"  = "coplan_web"
 }
 $tokens = $tokens | ForEach-Object {
     if ($aliases.ContainsKey($_)) { $aliases[$_] } else { $_ }
@@ -29,7 +31,6 @@ $tokens = $tokens | ForEach-Object {
 
 $webApps = @{
     "coplan_web" = "Coplan Web.exe"
-    "capex" = "Ambiente Capex.exe"
     "cadastro" = "Sistema de Cadastro.exe"
 }
 

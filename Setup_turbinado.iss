@@ -9,18 +9,18 @@
 ;   ISCC /DAPP_ONLY=diag        Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=imagedx     Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=unif        Setup_turbinado.iss
-;   ISCC /DAPP_ONLY=coplan_web  Setup_turbinado.iss   (pywebview)
-;   ISCC /DAPP_ONLY=capex       Setup_turbinado.iss   (pywebview)
+;   ISCC /DAPP_ONLY=coplan_web  Setup_turbinado.iss   (pywebview; ja inclui Capex)
 ;   ISCC /DAPP_ONLY=status      Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=cadastro    Setup_turbinado.iss   (pywebview)
 ;
 ; OBS:
 ;   * O Coplan PySide6 legado (Coplan.exe) foi descontinuado; agora so
 ;     existe Coplan Web.exe (pywebview).
-;   * Capex agora tambem e' pywebview (substituiu o desktop legado);
-;     o nome do exe foi preservado ("Ambiente Capex.exe").
-;   * A chave antiga "coplan" e' aceita como alias de "coplan_web" pra
-;     retrocompat (vai virar coplan_web automaticamente).
+;   * O Ambiente Capex foi FUNDIDO dentro do Coplan (capex_engine): nao
+;     existe mais "Ambiente Capex.exe" separado — virou feature do
+;     Coplan Web.exe (regra user 2026-06-18).
+;   * As chaves antigas "coplan" e "capex" sao aceitas como alias de
+;     "coplan_web" pra retrocompat (viram coplan_web automaticamente).
 ;
 ; Entrada esperada:
 ;   dist\FerramentasCompartilhadas\_internal\...  (compartilhado)
@@ -38,6 +38,20 @@
   #define APP_ONLY "coplan_web"
 #endif
 
+; Alias retrocompat: "capex" foi fundido no Coplan (capex_engine); o
+; Ambiente Capex.exe nao existe mais. Redireciona pro coplan_web.
+#if APP_ONLY == "capex"
+  #undef APP_ONLY
+  #define APP_ONLY "coplan_web"
+#endif
+
+; Alias retrocompat: "status" (Status de Medicao) foi fundido no Elexplan; o
+; Status de medicao.exe nao existe mais. Redireciona pro elexplan.
+#if APP_ONLY == "status"
+  #undef APP_ONLY
+  #define APP_ONLY "elexplan"
+#endif
+
 #define IncludeAll    (APP_ONLY == "all")
 #define WantLauncher  (IncludeAll || APP_ONLY == "launcher")
 #define WantElexplan  (IncludeAll || APP_ONLY == "elexplan")
@@ -45,8 +59,12 @@
 #define WantImageDx   (IncludeAll || APP_ONLY == "imagedx")
 #define WantUnif      (IncludeAll || APP_ONLY == "unif")
 #define WantCoplanWeb (IncludeAll || APP_ONLY == "coplan_web")
-#define WantCapex     (IncludeAll || APP_ONLY == "capex")
-#define WantStatus    (IncludeAll || APP_ONLY == "status")
+; Capex fundido no Coplan (capex_engine): nunca ha exe/componente capex proprio.
+; Mantido como 0 para compilar fora todos os blocos `#if WantCapex` antigos.
+#define WantCapex     (0)
+; Status de Medicao fundido no Elexplan: nunca ha exe/componente status proprio.
+; Mantido como 0 para compilar fora todos os blocos `#if WantStatus` antigos.
+#define WantStatus    (0)
 #define WantCadastro  (IncludeAll || APP_ONLY == "cadastro")
 
 #define AppId        "{7A3B2C8E-6C4E-4C1C-9D91-3F1A1C0AA123}"
@@ -250,6 +268,13 @@ Type: files;          Name: "{app}\launcher.log"
 ; Remove o Coplan.exe (legado PySide6) deixado por versoes anteriores —
 ; foi substituido pelo Coplan Web.exe (pywebview).
 Type: files;          Name: "{app}\Coplan.exe"
+; Remove o Ambiente Capex.exe (+ config) de bundles antigos: o Capex foi
+; fundido dentro do Coplan Web.exe (capex_engine), nao ha mais exe separado.
+Type: files;          Name: "{app}\Ambiente Capex.exe"
+Type: files;          Name: "{app}\Ambiente Capex.exe.config"
+; Remove o Status de medicao.exe de bundles antigos: foi fundido dentro do
+; Elexplan.exe (abas Chaves/Status/Estatistica), nao ha mais exe separado.
+Type: files;          Name: "{app}\Status de medicao.exe"
 
 [Files]
 ; ------------------- NUCLEO -------------------
@@ -770,7 +795,7 @@ begin
   begin
     if WillNeedWebView2() and not IsWebView2Installed() then
     begin
-      if MsgBox('Os apps Cadastro, Coplan Web e Ambiente Capex precisam do' + #13#10 +
+      if MsgBox('Os apps Cadastro e Coplan Web (que ja inclui o Capex) precisam do' + #13#10 +
                 'Microsoft WebView2 Runtime, que nao foi detectado.' + #13#10 +
                 'Sem ele, a interface desses apps nao abre.' + #13#10 + #13#10 +
                 'Deseja baixar o WebView2 Runtime agora? (abrira o navegador)',

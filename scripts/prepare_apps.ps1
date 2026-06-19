@@ -9,9 +9,13 @@ $repos = @(
   @{ Target = "launcher";              Url = "https://github.com/Talkfero/Ferramenta_plan.git" },
   @{ Target = "elexplan";              Url = "https://github.com/Talkfero/elexplan.git" },
   @{ Target = "diagnostico";           Url = "https://github.com/Talkfero/diagnostico_atual.git" },
+  # Capex foi fundido dentro do Coplan (capex_engine vendorizado em coplanweb/);
+  # nao ha mais repo/app/exe capex separado. Ver coplanweb/backend/domains/capex.py
+  # (regra user 2026-06-18 "coplan vira a ferramenta unica").
   @{ Target = "coplan";                Url = "https://github.com/Talkfero/coplanweb.git" },
-  @{ Target = "capex";                 Url = "https://github.com/Talkfero/capex.git" },
-  @{ Target = "status_medicao";        Url = "https://github.com/Talkfero/status_medicao.git" },
+  # Status de Medicao foi fundido dentro do Elexplan (chaves + status PIM +
+  # estatistica); nao ha mais app/exe/repo status_medicao separado. Ver
+  # elexplan/codigo1_elexplan.py (regra user 2026-06-18).
   @{ Target = "cadastro_viabilidades"; Url = "https://github.com/Talkfero/sistemadecadastro.git" }
 )
 

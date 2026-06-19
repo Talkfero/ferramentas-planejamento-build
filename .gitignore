@@ -5,3 +5,15 @@ Output/
 *.log
 __pycache__/
 *.pyc
+
+# venv isolado do build local (scripts/build_all_local.ps1)
+.build_venv/
+
+# apps montados pelo prepare_apps(.ps1|_local.ps1) a partir dos repos.
+# imagedx e unificador sao versionados aqui e NAO entram no ignore.
+apps/launcher/
+apps/elexplan/
+apps/diagnostico/
+apps/coplan/
+apps/status_medicao/
+apps/cadastro_viabilidades/

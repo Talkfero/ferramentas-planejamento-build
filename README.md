@@ -1,16 +1,26 @@
 # Ferramentas de Planejamento - build completo
 
-Empacotador Windows para os 9 aplicativos:
+Empacotador Windows para os 7 aplicativos:
 
 - Ferramentas de Planejamento / launcher
-- Elexplan
+- Elexplan (ja inclui o **Status de Medicao**: chaves/rebalanceamento, status PIM e estatistica)
 - Diagnostico de alimentadores
 - ImageDx - Detalhamento
 - Unificador de arquivos
-- Coplan Web
-- Ambiente Capex
-- Status de medicao
+- Coplan Web (ja inclui o **Ambiente Capex** embarcado — `capex_engine`)
 - Sistema de Cadastro
+
+> **Capex fundido no Coplan (2026-06-18):** o antigo app *Ambiente Capex* deixou
+> de ter exe/repo proprios. O motor de calculo foi vendorizado para
+> `coplanweb/capex_engine/` e exposto como o "Gerenciador de Cenarios" dentro do
+> **Coplan Web.exe**. As chaves `capex` e `coplan` continuam aceitas como alias
+> de `coplan_web` para retrocompat.
+>
+> **Status de Medicao fundido no Elexplan (2026-06-18):** o antigo app *Status de
+> medicao* deixou de ter exe/repo proprios. Suas funcoes (Gerar arquivo de
+> chaves + otimizador de rebalanceamento de fases, Status PIM por alimentador e
+> Analise Estatistica) viraram abas do **Elexplan.exe**. A chave `status`
+> continua aceita como alias de `elexplan`.
 
 O instalador usa Inno Setup com `PrivilegesRequired=lowest` e instala em
 `{localappdata}\Programs\Ferramentas de Planejamento`, portanto nao exige
@@ -26,7 +36,8 @@ administrador do usuario final.
 No workflow, o input `apps` escolhe qual instalador gerar:
 
 - `all`: instalador completo.
-- `coplan_web`, `capex`, `cadastro` etc.: instalador parcial de um app.
+- `coplan_web`, `cadastro` etc.: instalador parcial de um app.
+  (`capex` resolve para `coplan_web`; `status` resolve para `elexplan`.)
 
 Mesmo no instalador parcial, o workflow monta o `_internal` completo. Assim da
 para atualizar apenas um executavel, como `Coplan Web.exe`, sem deixar os outros

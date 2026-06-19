@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       apps:
-        description: "Instalador a gerar: all ou uma chave unica (launcher,elexplan,diag,imagedx,unif,coplan_web,capex,status,cadastro)"
+        description: "Instalador a gerar: all ou uma chave unica (launcher,elexplan,diag,imagedx,unif,coplan_web,cadastro). Capex fundido no coplan_web; Status de Medicao fundido no elexplan."
         required: false
         default: "all"
   push:

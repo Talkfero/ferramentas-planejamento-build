@@ -1,0 +1,10 @@
+# Dependencias do Unificador de arquivos (empacotado pelo multi_apps.spec).
+# Versoes PINADAS (==) para build reproduzivel e contra supply-chain.
+# Validadas no .build_venv em 2026-06-18. Atualize junto com requirements.lock.txt.
+PySide6==6.11.1
+polars==1.41.2
+fastexcel==0.20.2
+pandas==3.0.3
+openpyxl==3.1.5
+chardet==7.4.3
+QtAwesome==1.4.2

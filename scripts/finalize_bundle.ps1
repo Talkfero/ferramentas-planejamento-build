@@ -16,7 +16,6 @@ if (Test-Path $ConfigDir) {
 
 $expected = @(
     "Coplan Web.exe.config",
-    "Ambiente Capex.exe.config",
     "Sistema de Cadastro.exe.config"
 )
 

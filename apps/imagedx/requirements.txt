@@ -1,0 +1,8 @@
+# Dependencias do ImageDx - Detalhamento (empacotado pelo multi_apps.spec).
+# Versoes PINADAS (==) para build reproduzivel e contra supply-chain.
+# Validadas no .build_venv em 2026-06-18. Atualize junto com requirements.lock.txt.
+#
+# Pillow e' import direto (PIL.Image/ImageGrab em codigo3_imagedx.py); antes vinha
+# so transitivamente via matplotlib no build "all" — pinar aqui corrige build isolado.
+PySide6==6.11.1
+Pillow==12.2.0

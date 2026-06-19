@@ -12,13 +12,17 @@ rem   build_all_shared.bat launcher cadastro       -> subset
 rem
 rem Chaves validas:
 rem   launcher, elexplan, diag, imagedx, unif,
-rem   coplan_web, capex, status, cadastro
+rem   coplan_web, cadastro
 rem
-rem coplan_web  = Coplan Web.exe   (pywebview, substituiu o legado PyQt5)
-rem capex       = Ambiente Capex.exe (pywebview, substituiu o desktop)
+rem coplan_web  = Coplan Web.exe   (pywebview; ja embarca o motor CAPEX)
+rem elexplan    = Elexplan.exe     (ja inclui o Status de Medicao: chaves/
+rem               rebalanceamento, status PIM por alimentador e estatistica)
 rem cadastro    = Sistema de Cadastro.exe (pywebview)
 rem
-rem A chave antiga "coplan" e' aceita como alias de "coplan_web".
+rem Aliases retrocompat:
+rem   "coplan" -> "coplan_web"
+rem   "capex"  -> "coplan_web" (Ambiente Capex fundido no Coplan / capex_engine)
+rem   "status" -> "elexplan"   (Status de Medicao fundido no Elexplan)
 rem
 rem Dependencias: antes do PyInstaller, instala o requirements de cada
 rem app selecionado (apps web usam requirements-web.txt; apps sem arquivo
@@ -41,6 +45,10 @@ if "%~1"=="" goto do_build
 rem Alias retrocompat: "coplan" antigo vira "coplan_web"
 set "ARG=%~1"
 if /I "!ARG!"=="coplan" set "ARG=coplan_web"
+rem Capex fundido no Coplan: aceita "capex" como alias de coplan_web.
+if /I "!ARG!"=="capex" set "ARG=coplan_web"
+rem Status de Medicao fundido no Elexplan: aceita "status" como alias.
+if /I "!ARG!"=="status" set "ARG=elexplan"
 if defined APPS (
   set "APPS=!APPS!,!ARG!"
 ) else (
@@ -57,7 +65,7 @@ echo   %~nx0 all                    todos os apps
 echo   %~nx0 launcher               apenas launcher
 echo   %~nx0 launcher cadastro      subset (launcher + cadastro)
 echo.
-echo Chaves: launcher, elexplan, diag, imagedx, unif, coplan_web, capex, status, cadastro
+echo Chaves: launcher, elexplan, diag, imagedx, unif, coplan_web, cadastro
 echo.
 exit /b 0
 
@@ -68,16 +76,14 @@ echo   Build - Ferramentas de Planejamento
 echo =====================================================
 echo     0  Todos
 echo     1  Launcher (Ferramentas de Planejamento)
-echo     2  Elexplan
+echo     2  Elexplan           (ja inclui o Status de Medicao)
 echo     3  Diagnostico de alimentadores
 echo     4  ImageDx - Detalhamento
 echo     5  Unificador de arquivos
-echo     6  Coplan Web         (pywebview)
-echo     7  Ambiente Capex     (pywebview)
-echo     8  Status de medicao
-echo     9  Sistema de Cadastro (pywebview)
+echo     6  Coplan Web         (pywebview, ja inclui o Capex)
+echo     7  Sistema de Cadastro (pywebview)
 echo =====================================================
-echo  Dicas: pode combinar (ex. "1 3 9") ou digitar as chaves
+echo  Dicas: pode combinar (ex. "1 3 7") ou digitar as chaves
 echo         (ex. "launcher diag cadastro coplan_web")
 echo.
 set /p "CHOICE=Escolha: "
@@ -94,9 +100,7 @@ for %%N in (!CHOICE!) do (
   if "%%N"=="4"        set "KEY=imagedx"
   if "%%N"=="5"        set "KEY=unif"
   if "%%N"=="6"        set "KEY=coplan_web"
-  if "%%N"=="7"        set "KEY=capex"
-  if "%%N"=="8"        set "KEY=status"
-  if "%%N"=="9"        set "KEY=cadastro"
+  if "%%N"=="7"        set "KEY=cadastro"
   if /I "%%N"=="all"        set "KEY=all"
   if /I "%%N"=="launcher"   set "KEY=launcher"
   if /I "%%N"=="elexplan"   set "KEY=elexplan"
@@ -106,8 +110,10 @@ for %%N in (!CHOICE!) do (
   rem Alias: "coplan" antigo vira "coplan_web"
   if /I "%%N"=="coplan"     set "KEY=coplan_web"
   if /I "%%N"=="coplan_web" set "KEY=coplan_web"
-  if /I "%%N"=="capex"      set "KEY=capex"
-  if /I "%%N"=="status"     set "KEY=status"
+  rem Alias: "capex" fundido no Coplan -> coplan_web
+  if /I "%%N"=="capex"      set "KEY=coplan_web"
+  rem Alias: "status" fundido no Elexplan -> elexplan
+  if /I "%%N"=="status"     set "KEY=elexplan"
   if /I "%%N"=="cadastro"   set "KEY=cadastro"
   if defined KEY (
     if defined APPS (
@@ -151,7 +157,7 @@ if errorlevel 1 (
 
 rem Expande "all" para todas as chaves; senao usa a lista selecionada.
 set "DEP_KEYS=!APPS!"
-if /I "!APPS!"=="all" set "DEP_KEYS=launcher,elexplan,diag,imagedx,unif,coplan_web,capex,status,cadastro"
+if /I "!APPS!"=="all" set "DEP_KEYS=launcher,elexplan,diag,imagedx,unif,coplan_web,cadastro"
 
 set "DEP_FAIL="
 for %%K in (!DEP_KEYS!) do call :install_for %%K
@@ -232,18 +238,16 @@ if /I "!K!"=="coplan_web" (
   set "REQ=apps\coplan\requirements-web.txt"
   set "REQ_EXTRA=apps\coplan\scripts\build\requirements-build.txt"
 )
-if /I "!K!"=="capex" (
-  set "REQ=apps\capex\web\requirements-web.txt"
-  set "PKGS=pythonnet clr_loader"
-)
 if /I "!K!"=="cadastro" (
   set "REQ=apps\cadastro_viabilidades\main_web\requirements-web.txt"
   set "PKGS=pythonnet clr_loader"
 )
-if /I "!K!"=="elexplan"   set "PKGS=PySide6"
-if /I "!K!"=="imagedx"    set "PKGS=PySide6"
-if /I "!K!"=="status"     set "PKGS=PySide6"
-if /I "!K!"=="unif"       set "PKGS=PySide6 chardet openpyxl pandas polars fastexcel qtawesome"
+rem Elexplan agora inclui o Status de Medicao (usa openpyxl p/ XLSX de chaves);
+rem usa o requirements.txt do proprio app (pandas/numpy/PySide6/openpyxl).
+if /I "!K!"=="elexplan"   set "REQ=apps\elexplan\requirements.txt"
+rem imagedx e unif tem requirements.txt PINADO (versoes ==) no proprio app.
+if /I "!K!"=="imagedx"    set "REQ=apps\imagedx\requirements.txt"
+if /I "!K!"=="unif"       set "REQ=apps\unificador\requirements.txt"
 
 if defined REQ  goto install_req
 if defined PKGS goto install_pkgs

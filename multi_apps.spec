@@ -8,7 +8,14 @@ Parametrizavel via variavel de ambiente APPS_TO_BUILD:
   APPS_TO_BUILD=launcher,cadastro   -> subconjunto
 
 Chaves validas:
-  launcher, elexplan, diag, imagedx, unif, coplan_web, capex, status, cadastro
+  launcher, elexplan, diag, imagedx, unif, coplan_web, cadastro
+
+OBS: o antigo 'capex' (Ambiente Capex.exe) foi FUNDIDO dentro do Coplan
+(capex_engine vendorizado em coplanweb/) — virou feature do "Coplan Web.exe".
+OBS: o antigo 'status' (Status de medicao.exe) foi FUNDIDO dentro do Elexplan
+(abas Chaves/Rebalanceamento + Status Medicoes + Analise Estatistica) — nao ha
+mais chave/exe/repo status separado (regra user 2026-06-18). 'status' e' aceito
+como alias de 'elexplan'.
 
 Saida:
   dist/FerramentasCompartilhadas/
@@ -28,7 +35,7 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 # =====================================================================
 VALID_KEYS = {
     'launcher', 'elexplan', 'diag', 'imagedx',
-    'unif', 'coplan_web', 'capex', 'status', 'cadastro',
+    'unif', 'coplan_web', 'cadastro',
 }
 
 _apps_env = os.environ.get('APPS_TO_BUILD', 'all').strip().lower()
@@ -44,6 +51,16 @@ else:
         if 'coplan' in tokens:
             tokens.discard('coplan')
             tokens.add('coplan_web')
+        # Alias retrocompat: 'capex' foi fundido no Coplan (capex_engine). Um
+        # caller pedindo 'capex' agora recebe o coplan_web (que ja o embarca).
+        if 'capex' in tokens:
+            tokens.discard('capex')
+            tokens.add('coplan_web')
+        # Alias retrocompat: 'status' (Status de Medicao) foi fundido no
+        # Elexplan; remapeia para elexplan.
+        if 'status' in tokens:
+            tokens.discard('status')
+            tokens.add('elexplan')
         invalid = tokens - VALID_KEYS
         if invalid:
             raise SystemExit(
@@ -81,20 +98,18 @@ COPLAN_FRONTEND_DIR = os.path.join(COPLAN_DIR, "frontend")
 # reaponta FRONTEND_DIR/HTML_FILE para sys._MEIPASS antes de chamar
 # main_web.main(). Apontar direto pro main_web.py quebra os assets no .exe.
 COPLAN_LAUNCHER = os.path.join(COPLAN_DIR, "scripts", "build", "coplan_launcher.py")
-CAPEX_DIR      = os.path.join(APPS_DIR, "capex")
-CAPEX_WEB_DIR  = os.path.join(CAPEX_DIR, "web")
-CAPEX_WEB_FRONTEND_DIR = os.path.join(CAPEX_WEB_DIR, "frontend")
-# Entry point frozen do Capex web: unblock MOTW, reaponta WEB_DIR/INDEX_HTML
-# pra _MEIPASS/web e move config.json/scenarios.json pra %LOCALAPPDATA%.
-CAPEX_WEB_LAUNCHER = os.path.join(CAPEX_DIR, "_nina_ceo", "builds", "capex_web_launcher.py")
-STATUS_DIR     = os.path.join(APPS_DIR, "status_medicao")
+# Capex foi fundido no Coplan: o motor virou o pacote `capex_engine/` dentro de
+# apps/coplan/ (vendorizado). Nao ha mais CAPEX_DIR/exe/launcher proprios — o
+# Coplan Web ja o empacota (ver bloco coplan_web e COPLAN_INTERNAL_HIDDEN).
+# Status de Medicao foi fundido no Elexplan (abas Chaves/Status/Estatistica);
+# nao ha mais STATUS_DIR/exe proprios. O Elexplan ja cobre essas funcoes.
 CADASTRO_DIR   = os.path.join(APPS_DIR, "cadastro_viabilidades")
 CADASTRO_WEB_DIR = os.path.join(CADASTRO_DIR, "main_web")
 
 DIST_NAME = "FerramentasCompartilhadas"
 block_cipher = None
 
-# Runtime hook compartilhado dos apps pywebview (coplan_web/capex/cadastro):
+# Runtime hook compartilhado dos apps pywebview (coplan_web/cadastro):
 # anti-zumbi (os._exit apos fechar janelas) + watchdog anti-congelamento
 # (auto-kill se a janela ficar "Nao respondendo" por ~30s). Sem ele, janela
 # congelada ignora o "Finalizar tarefa" do Gerenciador e o processo zumbi
@@ -133,15 +148,9 @@ APP_REQUIRED_FILES = {
         COPLAN_LAUNCHER,
         os.path.join(COPLAN_FRONTEND_DIR, "index.html"),
         os.path.join(COPLAN_FRONTEND_DIR, "assets", "cadastro-de-obras.ico"),
-    ],
-    "capex": [
-        CAPEX_WEB_LAUNCHER,
-        os.path.join(CAPEX_WEB_DIR, "main_web.py"),
-        os.path.join(CAPEX_WEB_FRONTEND_DIR, "index.html"),
-        os.path.join(CAPEX_DIR, "capex.ico"),
-    ],
-    "status": [
-        os.path.join(STATUS_DIR, "status_medicao.py"),
+        # Capex embarcado: o motor vendorizado precisa existir no clone do Coplan.
+        os.path.join(COPLAN_DIR, "capex_engine", "__init__.py"),
+        os.path.join(COPLAN_FRONTEND_DIR, "js", "bridge", "90-capex.js"),
     ],
     "cadastro": [
         os.path.join(CADASTRO_WEB_DIR, "main_web.py"),
@@ -251,26 +260,28 @@ def _collect_submodules_safe(*pkgs, extra_paths=()):
 
 
 # pywebview + backend .NET (Windows EdgeChromium/WebView2). Necessario
-# para os TRES apps web (coplan_web, capex, cadastro).
+# para os dois apps web (coplan_web, cadastro).
 WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
     "webview", "clr_loader", "pythonnet"
 )
 
-# Extras do Capex web: python-pptx embute o template default.pptx (datas)
-# e matplotlib precisa do mpl-data. matplotlib e' lazy-import em
-# buildup_pptx (regra "enxugar deps"); o hook embutido coleta o mpl-data
-# quando 'matplotlib' esta no grafo (hiddenimports abaixo).
-CAPEX_EXTRA_DATAS, CAPEX_EXTRA_BINARIES, CAPEX_EXTRA_HIDDEN = _collect_all_safe(
-    "pptx", "matplotlib", "pyparsing"
+# Extras do Build-up do Coplan (motor CAPEX embarcado): python-pptx embute o
+# template default.pptx (datas) e matplotlib/numpy precisam de mpl-data + C
+# extensions. Sao lazy-import em capex_engine/backend/buildup_pptx.py (so quando
+# o usuario exporta o Build-up); o collect_all garante mpl-data/ft2font/numpy
+# no bundle frozen. Espelha o build do proprio Coplan (scripts/build/Coplan.spec).
+COPLAN_EXTRA_DATAS, COPLAN_EXTRA_BINARIES, COPLAN_EXTRA_HIDDEN = _collect_all_safe(
+    "pptx", "matplotlib", "numpy", "pyparsing"
 )
 
-# COPLAN_DIR no path para a coleta achar backend/core/runtime/shared do
-# Coplan (vivem em apps/coplan/, nao na raiz). Forca TODO submodulo desses
+# COPLAN_DIR no path para a coleta achar backend/core/runtime/shared/capex_engine
+# do Coplan (vivem em apps/coplan/, nao na raiz). Forca TODO submodulo desses
 # pacotes como hiddenimport -- blinda contra imports lazy (core.exceptions,
-# core.services.apoio_service, core.repositories.excel_cache, shared.*) que a
-# analise estatica do PyInstaller nao segue de dentro de metodos.
+# core.services.apoio_service, core.repositories.excel_cache, shared.*,
+# capex_engine.* importado lazy pelo CapexMixin) que a analise estatica do
+# PyInstaller nao segue de dentro de metodos.
 COPLAN_INTERNAL_HIDDEN = _collect_submodules_safe(
-    "backend", "core", "runtime", "shared", extra_paths=[COPLAN_DIR]
+    "backend", "core", "runtime", "shared", "capex_engine", extra_paths=[COPLAN_DIR]
 )
 print(
     f"[multi_apps.spec] COPLAN_INTERNAL_HIDDEN: "
@@ -283,6 +294,7 @@ CADASTRO_INTERNAL_HIDDEN = [
     "mw_backup",
     "mw_base",
     "mw_config",
+    "mw_secret",
     "mw_db",
     "mw_despacho",
     "mw_email",
@@ -342,36 +354,6 @@ def _coplan_web_datas():
             datas.append((asset, os.path.join("frontend", "assets")))
     for js in glob.glob(os.path.join(COPLAN_FRONTEND_DIR, "js", "bridge", "*.js")):
         datas.append((js, os.path.join("frontend", "js", "bridge")))
-    return datas
-
-
-def _capex_web_datas():
-    """Frontend + arquivos de config do Capex web (pywebview).
-
-    Estrutura no bundle:
-      _internal/web/frontend/index.html
-      _internal/web/frontend/css/styles.css
-      _internal/web/frontend/js/*.js
-      _internal/web/frontend/js/pages/*.js
-      _internal/config.json, scenarios.json, PLANO_DE_OBRAS.db
-    """
-    datas = []
-    index = os.path.join(CAPEX_WEB_FRONTEND_DIR, "index.html")
-    if os.path.isfile(index):
-        datas.append((index, os.path.join("web", "frontend")))
-    for css in glob.glob(os.path.join(CAPEX_WEB_FRONTEND_DIR, "css", "*.css")):
-        datas.append((css, os.path.join("web", "frontend", "css")))
-    for js in glob.glob(os.path.join(CAPEX_WEB_FRONTEND_DIR, "js", "*.js")):
-        datas.append((js, os.path.join("web", "frontend", "js")))
-    for js in glob.glob(os.path.join(CAPEX_WEB_FRONTEND_DIR, "js", "pages", "*.js")):
-        datas.append((js, os.path.join("web", "frontend", "js", "pages")))
-    # Defaults DEV. No instalador, o launcher PyInstaller monkey-patcheia
-    # CONFIG_FILE/SCENARIOS_FILE pra %LOCALAPPDATA%, mas embarcar os
-    # arquivos garante 1a execucao funcional.
-    for fname in ("config.json", "scenarios.json", "PLANO_DE_OBRAS.db"):
-        fp = os.path.join(CAPEX_DIR, fname)
-        if os.path.isfile(fp):
-            datas.append((fp, "."))
     return datas
 
 
@@ -509,13 +491,21 @@ if _want('coplan_web'):
     a = Analysis(
         [COPLAN_LAUNCHER],
         pathex=[ROOT, COPLAN_DIR],
-        binaries=WEBVIEW_BINARIES,
-        datas=_coplan_web_datas() + WEBVIEW_DATAS,
+        binaries=WEBVIEW_BINARIES + COPLAN_EXTRA_BINARIES,
+        datas=_coplan_web_datas() + WEBVIEW_DATAS + COPLAN_EXTRA_DATAS,
         runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=[
             "webview",
             "main_web",
             "pandas", "openpyxl", "sqlite3", "secrets",
+            # Motor CAPEX embarcado (Gerenciador de Cenarios) + Build-up.
+            # CapexMixin importa capex_engine de forma lazy (dentro de metodos);
+            # buildup_pptx faz lazy-import de matplotlib/pptx ao exportar.
+            "pptx", "matplotlib",
+            "capex_engine",
+            "capex_engine.main_web",
+            "capex_engine.backend.api",
+            "capex_engine.backend.buildup_pptx",
             # Domains do backend sao importados estaticamente em
             # backend.api, mas explicitamos pra robustez frente a
             # refactors que troquem imports por importlib.
@@ -569,7 +559,7 @@ if _want('coplan_web'):
             "core.exceptions",
             "core.models",
             "shared.texto_utils",
-        ] + WEBVIEW_HIDDEN + COPLAN_INTERNAL_HIDDEN,
+        ] + WEBVIEW_HIDDEN + COPLAN_INTERNAL_HIDDEN + COPLAN_EXTRA_HIDDEN,
         excludes=WEB_EXCLUDES,
         cipher=block_cipher,
     )
@@ -577,75 +567,14 @@ if _want('coplan_web'):
     _exes.append(_mk_exe(a, "Coplan Web",
                          os.path.join(COPLAN_FRONTEND_DIR, "assets", "cadastro-de-obras.ico")))
 
-if _want('capex'):
-    # Capex web (pywebview): substitui o desktop PySide6 (codigo6_ambiente
-    # CAPEX.py) a pedido do operador. Entry point e' o capex_web_launcher.py
-    # (unblock MOTW + reaponta WEB_DIR/INDEX_HTML pra _MEIPASS/web e config/
-    # scenarios pra %LOCALAPPDATA%), que chama web.main_web.main().
-    # pathex=CAPEX_DIR resolve o pacote `web.*`. matplotlib/pptx NAO entram
-    # no excludes (Buildup PPTX depende deles).
-    a = Analysis(
-        [CAPEX_WEB_LAUNCHER],
-        pathex=[ROOT, CAPEX_DIR],
-        binaries=WEBVIEW_BINARIES + CAPEX_EXTRA_BINARIES,
-        datas=_capex_web_datas() + WEBVIEW_DATAS + CAPEX_EXTRA_DATAS,
-        runtime_hooks=RUNTIME_HOOKS_WEB,
-        hiddenimports=[
-            "webview",
-            "pandas", "openpyxl", "sqlite3", "secrets",
-            "pptx",          # python-pptx (Buildup)
-            "matplotlib",    # graficos PNG do slide "Ganhos e Riscos"
-            "web.main_web",
-            "web.backend.api",
-            "web.backend.config_io",
-            "web.backend.constants",
-            "web.backend.scenarios_defaults",
-            "web.backend.lookups",
-            "web.backend.pi_metadata",
-            "web.backend.obras_mapping.schema",
-            "web.backend.obras_mapping.persistence",
-            "web.backend.utils",
-            "web.backend.sqlite_names",
-            "web.backend.cenarios_meta",
-            "web.backend.overrides",
-            "web.backend.audit",
-            "web.backend.obras_schema",
-            "web.backend.excel_format",
-            "web.backend.descricao",
-            "web.backend.obras_row_builder",
-            "web.backend.notas_tecnicas",
-            "web.backend.financeiro",
-            "web.backend.buildup_pptx",
-            "web.backend.diagnostico",
-            "web.backend.mapping_executor",
-        ] + WEBVIEW_HIDDEN + CAPEX_EXTRA_HIDDEN,
-        excludes=[
-            "tkinter", "_tkinter", "tcl",
-            "PyQt5", "PyQt6", "PySide6",
-            "pytest", "doctest", "pydoc",
-        ],
-        cipher=block_cipher,
-    )
-    _analyses.append(a)
-    _exes.append(_mk_exe(a, "Ambiente Capex",
-                         os.path.join(CAPEX_DIR, "capex.ico")))
+# NOTA: o antigo bloco `if _want('capex'):` (Ambiente Capex.exe) foi removido.
+# O Capex agora e' empacotado DENTRO do "Coplan Web" via capex_engine + os
+# COLLECT de matplotlib/numpy/pptx acima. Nao ha mais exe/chave capex separados.
 
-if _want('status'):
-    status_entry = os.path.join(STATUS_DIR, "status_medicao.py")
-    status_icon = os.path.join(STATUS_DIR, "Status.ico")
-    if not os.path.isfile(status_icon):
-        status_icon = os.path.join(LAUNCHER_DIR, "eng.ico")
-    a = Analysis(
-        [status_entry],
-        pathex=[ROOT, STATUS_DIR],
-        datas=[],
-        hiddenimports=[],
-        excludes=COMMON_EXCLUDES,
-        cipher=block_cipher,
-    )
-    _analyses.append(a)
-    _exes.append(_mk_exe(a, "Status de medicao",
-                         status_icon))
+# NOTA: o antigo bloco `if _want('status'):` (Status de medicao.exe) foi
+# removido. As funcoes de Status de Medicao (chaves/rebalanceamento, status PIM
+# por alimentador e analise estatistica) foram fundidas no Elexplan como abas.
+# Nao ha mais exe/chave status separados ('status' e' alias de 'elexplan').
 
 if _want('cadastro'):
     # Cadastro web (pywebview puro): main_web.py + index.html + JS/CSS.

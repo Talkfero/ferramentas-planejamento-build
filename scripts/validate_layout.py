@@ -32,16 +32,9 @@ REQUIRED = {
         "apps/coplan/frontend/index.html",
         "apps/coplan/frontend/assets/cadastro-de-obras.ico",
         "apps/coplan/requirements-web.txt",
-    ],
-    "capex": [
-        "apps/capex/_nina_ceo/builds/capex_web_launcher.py",
-        "apps/capex/web/main_web.py",
-        "apps/capex/web/frontend/index.html",
-        "apps/capex/web/requirements-web.txt",
-        "apps/capex/capex.ico",
-    ],
-    "status": [
-        "apps/status_medicao/status_medicao.py",
+        # Capex embarcado (capex_engine vendorizado dentro do Coplan).
+        "apps/coplan/capex_engine/__init__.py",
+        "apps/coplan/frontend/js/bridge/90-capex.js",
     ],
     "cadastro": [
         "apps/cadastro_viabilidades/main_web/main_web.py",
@@ -59,8 +52,12 @@ def selected(raw: str) -> list[str]:
     keys = []
     for item in raw.split(","):
         key = item.strip()
-        if key == "coplan":
+        if key in ("coplan", "capex"):
+            # capex foi fundido no Coplan (capex_engine); ambos -> coplan_web.
             key = "coplan_web"
+        elif key == "status":
+            # Status de Medicao foi fundido no Elexplan.
+            key = "elexplan"
         if key:
             keys.append(key)
     invalid = sorted(set(keys) - set(REQUIRED))

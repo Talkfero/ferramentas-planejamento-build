@@ -60,7 +60,7 @@ APPS: List[AppDef] = [
            "apps/launcher/codigo0_ferramentas_planejamento.py",
            "apps/launcher/eng.ico"),
     AppDef("elexplan", "Elexplan",
-           "Elaboração de planos",
+           "Parâmetros elétricos + Status de Medição (chaves, status PIM, estatística)",
            "apps/elexplan/codigo1_elexplan.py",
            "apps/elexplan/Elexplan.ico"),
     AppDef("diag", "Diagnóstico de alimentadores",
@@ -76,17 +76,9 @@ APPS: List[AppDef] = [
            "apps/unificador/codigo4_unificador_de_arquivos.py",
            "apps/unificador/Unificador.ico"),
     AppDef("coplan_web", "Coplan Web",
-           "Cadastro de obras (pywebview)",
+           "Cadastro de obras + Gerenciador de Cenários/CAPEX (pywebview)",
            "apps/coplan/main_web.py",
            "apps/coplan/frontend/assets/cadastro-de-obras.ico"),
-    AppDef("capex", "Ambiente Capex",
-           "Controle de CAPEX (pywebview)",
-           "apps/capex/web/main_web.py",
-           "apps/capex/capex.ico"),
-    AppDef("status", "Status de medição",
-           "Acompanhamento de status",
-           "apps/status_medicao/status_medicao.py",
-           "apps/status_medicao/Status.ico"),
     AppDef("cadastro", "Sistema de Cadastro",
            "Cadastro de viabilidades técnicas (pywebview)",
            "apps/cadastro_viabilidades/main_web/main_web.py",
@@ -104,17 +96,16 @@ APP_REQ_FILES = {
     "launcher":   "apps/launcher/requirements.txt",
     "diag":       "apps/diagnostico/requirements.txt",
     "coplan_web": "apps/coplan/requirements-web.txt",
-    "capex":      "apps/capex/web/requirements-web.txt",
     "cadastro":   "apps/cadastro_viabilidades/main_web/requirements-web.txt",
+    # imagedx e unif tem requirements.txt PINADO (versoes ==) versionado aqui.
+    "imagedx":    "apps/imagedx/requirements.txt",
+    "unif":       "apps/unificador/requirements.txt",
+    # Elexplan inclui o Status de Medicao (usa openpyxl p/ XLSX de chaves).
+    "elexplan":   "apps/elexplan/requirements.txt",
 }
 APP_REQ_PKGS = {
     "coplan_web": ["pythonnet", "clr_loader"],
-    "capex": ["pythonnet", "clr_loader"],
     "cadastro": ["pythonnet", "clr_loader"],
-    "elexplan": ["PySide6"],
-    "imagedx":  ["PySide6"],
-    "status":   ["PySide6"],
-    "unif":     ["PySide6", "chardet", "openpyxl"],
 }
 
 
