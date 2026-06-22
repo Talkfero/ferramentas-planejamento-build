@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Build all LOCAL (Windows) — espelho do workflow .github/workflows/build-installer.yml,
   rodando 100% offline (sem GitHub Actions, sem BUILD_REPO_READ_TOKEN).
@@ -35,7 +35,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path "$PSScriptRoot\..").Path
-$VenvDir = Join-Path $Root ".build_venv"
+$VenvDir = Join-Path $env:TEMP "fplan_build_venv"
 $VenvPy = Join-Path $VenvDir "Scripts\python.exe"
 
 function Write-Step($msg) {
@@ -77,8 +77,11 @@ try {
   # fixa a versao exata validada). Regenerar: pip freeze > requirements.lock.txt.
   $lock = Join-Path $Root "requirements.lock.txt"
   if (Test-Path $lock) {
-    $env:PIP_CONSTRAINT = $lock
-    Write-Host "PIP_CONSTRAINT = $lock (versoes travadas)"
+    # pip nao suporta PIP_CONSTRAINT com espacos no caminho; copia p/ TEMP sem espacos.
+    $lockTemp = Join-Path $env:TEMP "fplan_requirements.lock.txt"
+    Copy-Item $lock $lockTemp -Force
+    $env:PIP_CONSTRAINT = $lockTemp
+    Write-Host "PIP_CONSTRAINT = $lockTemp (copia sem espacos)"
   }
 
   # --- 1) montar apps/ a partir dos repos locais ----------------------------
@@ -148,3 +151,4 @@ try {
 finally {
   Pop-Location
 }
+
