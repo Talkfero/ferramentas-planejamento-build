@@ -38,10 +38,20 @@ REQUIRED = {
     ],
     "cadastro": [
         "apps/cadastro_viabilidades/main_web/main_web.py",
+        "apps/cadastro_viabilidades/main_web/mw_sap.py",
         "apps/cadastro_viabilidades/main_web/index.html",
         "apps/cadastro_viabilidades/main_web/requirements-web.txt",
         "apps/cadastro_viabilidades/Sistema_Cadastro.ico",
     ],
+}
+
+REQUIRED_TEXT = {
+    "cadastro": {
+        "apps/cadastro_viabilidades/main_web/requirements-web.txt": [
+            "extract-msg",
+            "pywin32",
+        ],
+    },
 }
 
 
@@ -76,6 +86,14 @@ def main() -> int:
         for rel in REQUIRED[key]:
             if not (ROOT / rel).is_file():
                 missing.append(rel)
+        for rel, needles in REQUIRED_TEXT.get(key, {}).items():
+            path = ROOT / rel
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore").lower()
+            for needle in needles:
+                if needle.lower() not in text:
+                    missing.append(f"{rel} (sem {needle})")
 
     if missing:
         print("Layout incompleto para o build:")

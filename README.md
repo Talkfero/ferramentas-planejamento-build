@@ -50,6 +50,13 @@ pagina de Releases sempre tem apenas o ultimo build.
 O workflow monta `apps/` a partir dos repos ativos no GitHub e usa os dois apps
 locais versionados aqui (`imagedx` e `unificador`).
 
+> **Sistema de Cadastro:** o build compartilhado precisa espelhar o
+> `main_web/requirements-web.txt` do repo `sistemadecadastro`. Desde a automação
+> SAP/1ª Medida, isso inclui leitura de PDF/7z/e-mail (`pypdf`, `py7zr`,
+> `extract-msg`) e SAP GUI/Excel no Windows (`pywin32`). O `multi_apps.spec`
+> declara os hidden imports/collects correspondentes; atualize o spec e o
+> `requirements.lock.txt` sempre que esse contrato mudar.
+
 ## Build local em Windows
 
 ```bat

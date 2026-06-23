@@ -154,6 +154,8 @@ APP_REQUIRED_FILES = {
     ],
     "cadastro": [
         os.path.join(CADASTRO_WEB_DIR, "main_web.py"),
+        os.path.join(CADASTRO_WEB_DIR, "mw_sap.py"),
+        os.path.join(CADASTRO_WEB_DIR, "requirements-web.txt"),
         os.path.join(CADASTRO_WEB_DIR, "index.html"),
         os.path.join(CADASTRO_DIR, "Sistema_Cadastro.ico"),
     ],
@@ -265,6 +267,13 @@ WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
     "webview", "clr_loader", "pythonnet"
 )
 
+# Leitura de pacote/anexos do Sistema de Cadastro. py7zr tem extensoes e
+# dependencias nativas; extract_msg carrega submodulos/datas de forma lazy ao
+# abrir e-mails .msg anexados pelo SAP.
+CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_all_safe(
+    "py7zr", "extract_msg"
+)
+
 # Extras do Build-up do Coplan (motor CAPEX embarcado): python-pptx embute o
 # template default.pptx (datas) e matplotlib/numpy precisam de mpl-data + C
 # extensions. Sao lazy-import em capex_engine/backend/buildup_pptx.py (so quando
@@ -299,6 +308,7 @@ CADASTRO_INTERNAL_HIDDEN = [
     "mw_despacho",
     "mw_email",
     "mw_feriados",
+    "mw_formulario",
     "mw_layout",
     "mw_lock",
     "mw_mapatermico",
@@ -310,6 +320,7 @@ CADASTRO_INTERNAL_HIDDEN = [
     "mw_resolve",
     "mw_schema",
     "mw_sources",
+    "mw_sap",
     "mw_text",
     "mw_validacao",
     "api_config_visual",
@@ -318,6 +329,7 @@ CADASTRO_INTERNAL_HIDDEN = [
     "api_email",
     "api_excel",
     "api_fontes",
+    "api_formulario",
     "api_mapa_termico",
     "api_notif",
     "api_obras",
@@ -586,13 +598,18 @@ if _want('cadastro'):
     a = Analysis(
         [os.path.join(CADASTRO_WEB_DIR, "main_web.py")],
         pathex=[ROOT, CADASTRO_WEB_DIR],
-        binaries=WEBVIEW_BINARIES,
-        datas=_cadastro_datas() + WEBVIEW_DATAS,
+        binaries=WEBVIEW_BINARIES + CADASTRO_EXTRA_BINARIES,
+        datas=_cadastro_datas() + WEBVIEW_DATAS + CADASTRO_EXTRA_DATAS,
         runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=[
             "webview",
             "pandas", "openpyxl", "sqlite3",
-        ] + WEBVIEW_HIDDEN + CADASTRO_INTERNAL_HIDDEN,
+            # Leitura de formularios/pacotes e e-mails anexados.
+            "pypdf", "py7zr", "extract_msg",
+            # SAP GUI scripting e fechamento de Excel exportado pelo SAP.
+            "win32com.client", "win32gui", "win32con",
+            "pythoncom", "pywintypes",
+        ] + WEBVIEW_HIDDEN + CADASTRO_INTERNAL_HIDDEN + CADASTRO_EXTRA_HIDDEN,
         excludes=[
             "PyQt5", "PyQt6", "PySide6",
             "matplotlib.backends.backend_tkagg",

@@ -14,6 +14,7 @@ on:
       - "build_all_shared.bat"
       - "Setup_turbinado.iss"
       - "build_gui.py"
+      - "requirements.lock.txt"
       - "scripts/**"
       - "app_configs/**"
       - "runtime_hooks/**"
