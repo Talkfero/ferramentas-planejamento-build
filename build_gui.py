@@ -105,7 +105,7 @@ APP_REQ_FILES = {
 }
 APP_REQ_PKGS = {
     "coplan_web": ["pythonnet", "clr_loader"],
-    "cadastro": ["pythonnet", "clr_loader"],
+    "cadastro": ["pywebview", "pythonnet", "clr_loader"],
 }
 
 

@@ -240,7 +240,7 @@ if /I "!K!"=="coplan_web" (
 )
 if /I "!K!"=="cadastro" (
   set "REQ=apps\cadastro_viabilidades\main_web\requirements-web.txt"
-  set "PKGS=pythonnet clr_loader"
+  set "PKGS=pywebview pythonnet clr_loader"
 )
 rem Elexplan agora inclui Status de Medicao e Extracao PIM;
 rem usa o requirements.txt do proprio app (pandas/numpy/PySide6/openpyxl/playwright).
