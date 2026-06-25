@@ -267,11 +267,19 @@ WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
     "webview", "clr_loader", "pythonnet"
 )
 
-# Leitura de pacote/anexos do Sistema de Cadastro. py7zr tem extensoes e
-# dependencias nativas; extract_msg carrega submodulos/datas de forma lazy ao
-# abrir e-mails .msg anexados pelo SAP.
+# Leitura de pacote/anexos do Sistema de Cadastro. py7zr tem codecs/deps
+# nativas; extract_msg carrega submodulos/datas de forma lazy ao abrir e-mails
+# .msg anexados pelo SAP.
 CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_all_safe(
-    "py7zr", "extract_msg"
+    "py7zr",
+    "Cryptodome",
+    "pyppmd",
+    "pybcj",
+    "multivolumefile",
+    "inflate64",
+    "brotli",
+    "backports.zstd",
+    "extract_msg",
 )
 
 PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_safe(

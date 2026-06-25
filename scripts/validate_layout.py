@@ -49,6 +49,10 @@ REQUIRED_TEXT = {
     "cadastro": {
         "apps/cadastro_viabilidades/main_web/requirements-web.txt": [
             "extract-msg",
+            "py7zr",
+            "pyppmd",
+            "pybcj",
+            "pycryptodomex",
             "pywin32",
         ],
     },

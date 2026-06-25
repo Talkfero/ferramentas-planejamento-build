@@ -44,14 +44,15 @@ jobs:
           BUILD_REPO_READ_TOKEN: ${{ secrets.BUILD_REPO_READ_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
           .\scripts\prepare_apps.ps1
-          python .\scripts\validate_layout.py --apps all
+          python .\scripts\validate_layout.py --apps $env:APPS_TO_BUILD
 
       - name: Build shared PyInstaller bundle
         shell: cmd
         env:
-          APPS_TO_BUILD: all
+          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
           call build_all_shared.bat %APPS_TO_BUILD%
 
@@ -62,8 +63,10 @@ jobs:
 
       - name: Validate pywebview runtime bundle
         shell: pwsh
+        env:
+          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
-          .\scripts\validate_runtime_bundle.ps1 -Apps all
+          .\scripts\validate_runtime_bundle.ps1 -Apps $env:APPS_TO_BUILD
 
       - name: Install Inno Setup
         shell: pwsh
@@ -104,7 +107,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: latest
           INSTALLER_APP: ${{ github.event.inputs.apps || 'all' }}
-          BUNDLE_APPS: all
+          BUNDLE_APPS: ${{ github.event.inputs.apps || 'all' }}
           COMMIT_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
