@@ -263,12 +263,6 @@ if not exist "!REQ!" (
 echo   [!K!] pip install -r !REQ!
 python -m pip install -r "!REQ!"
 if errorlevel 1 set "DEP_FAIL=1"
-if /I "!K!"=="elexplan" (
-  echo   [!K!] playwright install chromium
-  set "PLAYWRIGHT_BROWSERS_PATH=0"
-  python -m playwright install chromium
-  if errorlevel 1 set "DEP_FAIL=1"
-)
 if defined REQ_EXTRA (
   if not exist "!REQ_EXTRA!" (
     echo   [!K!] [aviso] requirements extra ausente: !REQ_EXTRA!

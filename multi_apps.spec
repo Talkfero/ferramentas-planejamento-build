@@ -277,6 +277,14 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
 PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_safe(
     "playwright"
 )
+PIM_EXTRA_DATAS = [
+    item for item in PIM_EXTRA_DATAS
+    if ".local-browsers" not in str(item[0]).replace("\\", "/")
+]
+PIM_EXTRA_BINARIES = [
+    item for item in PIM_EXTRA_BINARIES
+    if ".local-browsers" not in str(item[0]).replace("\\", "/")
+]
 
 # Extras do Build-up do Coplan (motor CAPEX embarcado): python-pptx embute o
 # template default.pptx (datas) e matplotlib/numpy precisam de mpl-data + C
