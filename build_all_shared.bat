@@ -242,8 +242,8 @@ if /I "!K!"=="cadastro" (
   set "REQ=apps\cadastro_viabilidades\main_web\requirements-web.txt"
   set "PKGS=pythonnet clr_loader"
 )
-rem Elexplan agora inclui o Status de Medicao (usa openpyxl p/ XLSX de chaves);
-rem usa o requirements.txt do proprio app (pandas/numpy/PySide6/openpyxl).
+rem Elexplan agora inclui Status de Medicao e Extracao PIM;
+rem usa o requirements.txt do proprio app (pandas/numpy/PySide6/openpyxl/playwright).
 if /I "!K!"=="elexplan"   set "REQ=apps\elexplan\requirements.txt"
 rem imagedx e unif tem requirements.txt PINADO (versoes ==) no proprio app.
 if /I "!K!"=="imagedx"    set "REQ=apps\imagedx\requirements.txt"
@@ -263,6 +263,12 @@ if not exist "!REQ!" (
 echo   [!K!] pip install -r !REQ!
 python -m pip install -r "!REQ!"
 if errorlevel 1 set "DEP_FAIL=1"
+if /I "!K!"=="elexplan" (
+  echo   [!K!] playwright install chromium
+  set "PLAYWRIGHT_BROWSERS_PATH=0"
+  python -m playwright install chromium
+  if errorlevel 1 set "DEP_FAIL=1"
+)
 if defined REQ_EXTRA (
   if not exist "!REQ_EXTRA!" (
     echo   [!K!] [aviso] requirements extra ausente: !REQ_EXTRA!

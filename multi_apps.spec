@@ -274,6 +274,10 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
     "py7zr", "extract_msg"
 )
 
+PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_safe(
+    "playwright"
+)
+
 # Extras do Build-up do Coplan (motor CAPEX embarcado): python-pptx embute o
 # template default.pptx (datas) e matplotlib/numpy precisam de mpl-data + C
 # extensions. Sao lazy-import em capex_engine/backend/buildup_pptx.py (so quando
@@ -434,8 +438,14 @@ if _want('elexplan'):
     a = Analysis(
         [elexplan_entry],
         pathex=[ROOT, ELEXPLAN_DIR],
-        datas=[],
-        hiddenimports=[],
+        binaries=PIM_EXTRA_BINARIES,
+        datas=_existing_datas([
+            (os.path.join(ELEXPLAN_DIR, "pim_config.json"), "."),
+        ]) + PIM_EXTRA_DATAS,
+        hiddenimports=(
+            _collect_submodules_safe("pim_backend", extra_paths=[ELEXPLAN_DIR])
+            + PIM_EXTRA_HIDDEN
+        ),
         excludes=COMMON_EXCLUDES,
         cipher=block_cipher,
     )
