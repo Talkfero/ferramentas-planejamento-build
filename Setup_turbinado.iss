@@ -69,8 +69,8 @@
 
 #define AppId        "{7A3B2C8E-6C4E-4C1C-9D91-3F1A1C0AA123}"
 #define AppName      "Ferramentas de Planejamento"
-#define AppVersion   "1.1.2"
-#define AppVersion4  "1.1.2.0"
+#define AppVersion   "1.1.3"
+#define AppVersion4  "1.1.3.0"
 #define AppPublisher "Arthur Cardoso"
 #define SrcBundle    "dist\FerramentasCompartilhadas"
 
