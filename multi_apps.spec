@@ -376,10 +376,19 @@ def _coplan_web_datas():
       _internal/frontend/index.html
       _internal/frontend/assets/cadastro-de-obras.ico
       _internal/frontend/js/bridge/*.js
+      _internal/capex_engine/assets/logo_equatorial.png
 
     Os modulos Python (backend/, core/, runtime/, shared/) sao detectados
     via static analysis dos imports em main_web.py e nao precisam virar
     datas — PyInstaller os empacota como bytecode em _internal/.
+
+    Logo da aba "Obras" do Excel de cenario (capex_engine/backend/
+    excel_format.py::_obras_logo_path, regra user 2026-07-14): unico
+    asset binario do capex_engine, nao detectavel por static analysis.
+    Sem isso a logo simplesmente nao aparece na exportacao (best-effort,
+    nao derruba o export) — sumiu no instalador compartilhado porque este
+    spec e' separado do coplanweb/scripts/build/Coplan.spec (que ja tem
+    o datas equivalente).
     """
     datas = []
     index = os.path.join(COPLAN_FRONTEND_DIR, "index.html")
@@ -390,6 +399,9 @@ def _coplan_web_datas():
             datas.append((asset, os.path.join("frontend", "assets")))
     for js in glob.glob(os.path.join(COPLAN_FRONTEND_DIR, "js", "bridge", "*.js")):
         datas.append((js, os.path.join("frontend", "js", "bridge")))
+    for asset in glob.glob(os.path.join(COPLAN_DIR, "capex_engine", "assets", "*")):
+        if os.path.isfile(asset):
+            datas.append((asset, os.path.join("capex_engine", "assets")))
     return datas
 
 
