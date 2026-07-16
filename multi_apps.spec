@@ -185,6 +185,10 @@ _validate_layout()
 # =====================================================================
 # Excludes comuns
 # =====================================================================
+# NAO excluir "pydoc" daqui: pyqtgraph/parametertree/interactive.py faz
+# `import pydoc` no topo do modulo — excluir quebrava o "Grafico de
+# Grandezas"/"Curva" do Elexplan em silencio (ImportError generico sem
+# dizer que faltava justamente o pydoc, regra user 2026-07-16).
 COMMON_EXCLUDES = [
     "tkinter", "_tkinter", "tcl",
     "PyQt5", "PyQt6",
@@ -192,7 +196,7 @@ COMMON_EXCLUDES = [
     "matplotlib.backends.backend_tkagg",
     "matplotlib.backends.backend_gtk3agg",
     "matplotlib.backends.backend_wxagg",
-    "pytest", "doctest", "pydoc",
+    "pytest", "doctest",
     "PySide6.QtWebEngineCore",
     "PySide6.QtWebEngineWidgets",
     "PySide6.QtWebEngineQuick",
