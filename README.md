@@ -53,7 +53,9 @@ locais versionados aqui (`imagedx` e `unificador`).
 > **Sistema de Cadastro:** o build compartilhado precisa espelhar o
 > `main_web/requirements-web.txt` do repo `sistemadecadastro`. Desde a automação
 > SAP/1ª Medida, isso inclui leitura de PDF/7z/e-mail (`pypdf`, `py7zr`,
-> `extract-msg`) e SAP GUI/Excel no Windows (`pywin32`). O `multi_apps.spec`
+> `extract-msg`) e o fallback semântico local para formulários desconhecidos
+> (`sentence-transformers[onnx]`), além de SAP GUI/Excel no Windows (`pywin32`).
+> O `multi_apps.spec`
 > declara os hidden imports/collects correspondentes; atualize o spec e o
 > `requirements.lock.txt` sempre que esse contrato mudar.
 

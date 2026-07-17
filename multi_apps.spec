@@ -273,7 +273,8 @@ WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
 
 # Leitura de pacote/anexos do Sistema de Cadastro. py7zr tem codecs/deps
 # nativas; extract_msg carrega submodulos/datas de forma lazy ao abrir e-mails
-# .msg anexados pelo SAP.
+# .msg anexados pelo SAP. Sentence Transformers/ONNX e o fallback local para
+# formularios e normas que os parsers deterministas ainda nao reconhecem.
 CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_all_safe(
     "py7zr",
     "Cryptodome",
@@ -284,6 +285,11 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
     "brotli",
     "backports.zstd",
     "extract_msg",
+    "sentence_transformers",
+    "transformers",
+    "optimum",
+    "onnxruntime",
+    "tokenizers",
 )
 
 PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_safe(
@@ -648,6 +654,7 @@ if _want('cadastro'):
             "pandas", "openpyxl", "sqlite3",
             # Leitura de formularios/pacotes e e-mails anexados.
             "pypdf", "py7zr", "extract_msg",
+            "sentence_transformers", "transformers", "optimum", "onnxruntime",
             # SAP GUI scripting e fechamento de Excel exportado pelo SAP.
             "win32com.client", "win32gui", "win32con",
             "pythoncom", "pywintypes",

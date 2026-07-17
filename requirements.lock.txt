@@ -2,12 +2,16 @@
 # Gerado de .build_venv (pip freeze) em 2026-06-18.
 # Atualizado em 2026-06-23 para refletir os novos requirements do
 # Sistema de Cadastro (SAP GUI, PDF/7z e e-mails .msg).
+# Atualizado em 2026-07-17 para o fallback semantico local do Cadastro
+# (Sentence Transformers + modelo ONNX quantizado).
 #
 # Uso como TRAVA de versoes (constraint) em qualquer pip install do build:
 #   set PIP_CONSTRAINT=requirements.lock.txt   (ja setado por scripts/build_all_local.ps1)
 # Regenerar:  .build_venv\Scripts\python -m pip freeze > requirements.lock.txt
 # ----------------------------------------------------------------------------
 altgraph==0.17.5
+annotated-doc==0.0.4
+anyio==4.14.2
 backports.zstd==1.6.0
 beautifulsoup4==4.13.5
 bottle==0.13.4
@@ -15,6 +19,7 @@ brotli==1.2.0
 cffi==2.0.0
 chardet==7.4.3
 clr_loader==0.3.1
+click==8.4.2
 colorclass==2.2.2
 compressed-rtf==1.0.7
 contourpy==1.3.3
@@ -26,17 +31,38 @@ et_xmlfile==2.0.0
 extract-msg==0.55.0
 fastexcel==0.20.2
 fonttools==4.63.0
+filelock==3.30.2
+flatbuffers==25.12.19
+fsspec==2026.6.0
+h11==0.16.0
+hf-xet==1.5.2
+huggingface-hub==0.36.2
+httpcore==1.0.9
+httpx==0.28.1
 inflate64==1.0.4
+Jinja2==3.1.6
+joblib==1.5.3
 kiwisolver==1.5.0
 lark==1.3.1
 lxml==6.1.1
 matplotlib==3.11.0
+markdown-it-py==4.2.0
+MarkupSafe==3.0.3
+mdurl==0.1.2
+ml_dtypes==0.5.4
+mpmath==1.3.0
 msoffcrypto-tool==6.0.0
 multivolumefile==0.2.3
+narwhals==2.24.0
+networkx==3.6.1
 numpy==2.4.6
 olefile==0.47
 oletools==0.60.2
+onnx==1.22.0
+onnxruntime==1.27.0
 openpyxl==3.1.5
+optimum==2.1.0
+optimum-onnx==0.1.0
 packaging==26.2
 pandas==3.0.3
 pcodedmp==1.2.6
@@ -55,6 +81,8 @@ pyinstaller-hooks-contrib==2026.6
 pyparsing==3.3.2
 pypdf==6.14.2
 pyppmd==1.3.1
+protobuf==7.35.1
+PyYAML==6.0.3
 PySide6==6.11.1
 PySide6_Addons==6.11.1
 PySide6_Essentials==6.11.1
@@ -67,12 +95,26 @@ pywin32-ctypes==0.2.3
 QtAwesome==1.4.2
 QtPy==2.4.3
 red-black-tree-mod==1.22
+regex==2026.7.10
+rich==15.0.0
 RTFDE==0.1.2.2
+safetensors==0.8.0
+scikit-learn==1.9.0
+scipy==1.18.0
+sentence-transformers==5.6.0
 setuptools==82.0.1
+shellingham==1.5.4
 shiboken6==6.11.1
 six==1.17.0
 soupsieve==2.8.4
+sympy==1.14.0
 texttable==1.7.0
+threadpoolctl==3.6.0
+tokenizers==0.22.2
+torch==2.13.0
+tqdm==4.68.4
+transformers==4.57.6
+typer==0.27.0
 typing_extensions==4.15.0
 tzdata==2026.2
 tzlocal==5.4.3

@@ -54,6 +54,7 @@ REQUIRED_TEXT = {
             "pybcj",
             "pycryptodomex",
             "pywin32",
+            "sentence-transformers",
         ],
     },
 }
