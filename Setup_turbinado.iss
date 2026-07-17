@@ -278,7 +278,21 @@ Type: files;          Name: "{app}\Status de medicao.exe"
 
 [Files]
 ; ------------------- NUCLEO -------------------
-Source: "{#SrcBundle}\_internal\*"; DestDir: "{app}\_internal"; Flags: recursesubdirs createallsubdirs ignoreversion; Components: main
+; Excludes (nenhum necessario em runtime, so' reduzem risco de MAX_PATH e
+; peso do instalador): o ISCC (Delphi, sem suporte a long path) quebra com
+; "the system cannot find the path specified" em caminhos de origem que
+; passam de ~260 chars, e o fallback semantico do Cadastro (sentence-
+; transformers -> torch) trouxe varias arvores assim (regra user 2026-07-17):
+;   - *.dist-info\licenses\*: metadados de licenca (PEP 639) do torch
+;     replicam toda a arvore de vendors C++ pra atribuicao (ex.:
+;     third_party\kineto\libkineto\...\colorama\LICENSE.txt, 256+ chars).
+;   - torch\include\*: headers C++/CUDA (63 MB, 9375 arquivos) so' usados
+;     por quem compila extensoes contra o torch — nao pelo uso em runtime
+;     puro Python do sentence-transformers.
+;   - objects-Debug\*, objects-RelWithDebInfo\*, *.obj: intermediarios de
+;     build C++ do QML do PySide6 (ex.: QmlAssetDownloader) que ja
+;     chegavam perto do limite (259 chars) mesmo antes do torch.
+Source: "{#SrcBundle}\_internal\*"; DestDir: "{app}\_internal"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "\*.dist-info\licenses\*,\torch\include\*,objects-Debug\*,objects-RelWithDebInfo\*,*.obj"; Components: main
 
 #if WantLauncher
 Source: "{#SrcBundle}\Ferramentas de Planejamento.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: {#CompLauncher}
