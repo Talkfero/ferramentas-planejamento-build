@@ -4,6 +4,8 @@
 # Sistema de Cadastro (SAP GUI, PDF/7z e e-mails .msg).
 # Atualizado em 2026-07-17 para o fallback semantico local do Cadastro
 # (Sentence Transformers + modelo ONNX quantizado).
+# Atualizado em 2026-07-22 para o Snowflake (Reserva Tecnica + aba
+# Consulta do Cadastro), que sucedeu o Oracle desligado.
 #
 # Uso como TRAVA de versoes (constraint) em qualquer pip install do build:
 #   set PIP_CONSTRAINT=requirements.lock.txt   (ja setado por scripts/build_all_local.ps1)
@@ -12,14 +14,19 @@
 altgraph==0.17.5
 annotated-doc==0.0.4
 anyio==4.14.2
+asn1crypto==1.5.1
 backports.zstd==1.6.0
 beautifulsoup4==4.13.5
+boto3==1.43.54
+botocore==1.43.54
 bottle==0.13.4
 brotli==1.2.0
+certifi==2026.4.22
 cffi==2.0.0
 chardet==7.4.3
-clr_loader==0.3.1
+charset-normalizer==3.4.7
 click==8.4.2
+clr_loader==0.3.1
 colorclass==2.2.2
 compressed-rtf==1.0.7
 contourpy==1.3.3
@@ -30,24 +37,26 @@ ebcdic==1.1.1
 et_xmlfile==2.0.0
 extract-msg==0.55.0
 fastexcel==0.20.2
-fonttools==4.63.0
 filelock==3.30.2
 flatbuffers==25.12.19
+fonttools==4.63.0
 fsspec==2026.6.0
 h11==0.16.0
 hf-xet==1.5.2
-huggingface-hub==0.36.2
 httpcore==1.0.9
 httpx==0.28.1
+huggingface-hub==0.36.2
+idna==3.15
 inflate64==1.0.4
 Jinja2==3.1.6
+jmespath==1.1.0
 joblib==1.5.3
 kiwisolver==1.5.0
 lark==1.3.1
 lxml==6.1.1
-matplotlib==3.11.0
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
+matplotlib==3.11.0
 mdurl==0.1.2
 ml_dtypes==0.5.4
 mpmath==1.3.0
@@ -68,8 +77,10 @@ pandas==3.0.3
 pcodedmp==1.2.6
 pefile==2024.8.26
 pillow==12.2.0
+platformdirs==4.11.0
 polars==1.41.2
 polars-runtime-32==1.41.2
+protobuf==7.35.1
 proxy_tools==0.1.0
 psutil==7.2.2
 py7zr==1.1.3
@@ -78,26 +89,30 @@ pycparser==3.0
 pycryptodomex==3.23.0
 pyinstaller==6.21.0
 pyinstaller-hooks-contrib==2026.6
+pyjwt==2.13.0
+pyopenssl==26.3.0
 pyparsing==3.3.2
 pypdf==6.14.2
 pyppmd==1.3.1
-protobuf==7.35.1
-PyYAML==6.0.3
 PySide6==6.11.1
 PySide6_Addons==6.11.1
 PySide6_Essentials==6.11.1
 python-dateutil==2.9.0.post0
 python-pptx==1.0.2
 pythonnet==3.1.0
+pytz==2026.2
 pywebview==6.2.1
 pywin32==312
 pywin32-ctypes==0.2.3
+PyYAML==6.0.3
 QtAwesome==1.4.2
 QtPy==2.4.3
 red-black-tree-mod==1.22
 regex==2026.7.10
+requests==2.34.2
 rich==15.0.0
 RTFDE==0.1.2.2
+s3transfer==0.19.2
 safetensors==0.8.0
 scikit-learn==1.9.0
 scipy==1.18.0
@@ -106,11 +121,14 @@ setuptools==82.0.1
 shellingham==1.5.4
 shiboken6==6.11.1
 six==1.17.0
+snowflake-connector-python==4.7.1
+sortedcontainers==2.4.0
 soupsieve==2.8.4
 sympy==1.14.0
 texttable==1.7.0
 threadpoolctl==3.6.0
 tokenizers==0.22.2
+tomlkit==0.15.1
 torch==2.13.0
 tqdm==4.68.4
 transformers==4.57.6
@@ -118,6 +136,7 @@ typer==0.27.0
 typing_extensions==4.15.0
 tzdata==2026.2
 tzlocal==5.4.3
+urllib3==2.7.0
 wheel==0.47.0
 win_unicode_console==0.5
 xlsxwriter==3.2.9
