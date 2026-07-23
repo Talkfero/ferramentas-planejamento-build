@@ -290,6 +290,11 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
     "optimum",
     "onnxruntime",
     "tokenizers",
+    # Snowflake: atualizacao automatica da Reserva Tecnica e a aba Consulta
+    # (sucede o Oracle, desligado). O import e lazy em
+    # mw_snowflake.conectar(), e o driver carrega backends/certificados que o
+    # PyInstaller nao enxerga sozinho -> collect_all.
+    "snowflake",
 )
 
 PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_safe(
@@ -658,6 +663,8 @@ if _want('cadastro'):
             # SAP GUI scripting e fechamento de Excel exportado pelo SAP.
             "win32com.client", "win32gui", "win32con",
             "pythoncom", "pywintypes",
+            # Consulta ao Snowflake (Reserva Tecnica + aba Consulta).
+            "snowflake.connector",
         ] + WEBVIEW_HIDDEN + CADASTRO_INTERNAL_HIDDEN + CADASTRO_EXTRA_HIDDEN,
         excludes=[
             "PyQt5", "PyQt6", "PySide6",
