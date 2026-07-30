@@ -26,8 +26,14 @@ Empacotador Windows para os 6 aplicativos:
 > **Coplan Web**, em `coplanweb/core/services/detalhamento_pptx.py` e
 > `kml_geo.py`. A chave `imagedx` continua aceita como alias de `coplan_web`, e
 > o instalador remove o `ImageDx- Detalhamento.exe` e o atalho de quem ja tinha
-> a suite instalada. O fonte segue versionado em `apps/imagedx/` apenas como
-> historico — nao entra em nenhum build.
+> a suite instalada.
+>
+> **O fonte fica guardado de proposito** em `apps/imagedx/` (nao e ignorado pelo
+> git, nao entra em build nenhum). Se um dia alguem precisar do app de volta,
+> basta desfazer o commit "Aposenta o ImageDx da suite": ele tem, num lugar so,
+> a chave nas listas de `multi_apps.spec` / `build_gui.py` /
+> `build_all_shared.bat` / `scripts/validate_layout.py` e o `WantImageDx` do
+> `Setup_turbinado.iss`.
 
 O instalador usa Inno Setup com `PrivilegesRequired=lowest` e instala em
 `{localappdata}\Programs\Ferramentas de Planejamento`, portanto nao exige

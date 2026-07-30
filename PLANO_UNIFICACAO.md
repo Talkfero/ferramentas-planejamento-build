@@ -134,7 +134,12 @@ Executado (esta é a única parte do documento que virou código):
 
 Sem pendência: o usuário confirmou em 30/07/2026 que **ninguém mais usa** o
 ImageDx, nem para montar prancha de imagem fora do detalhamento do Coplan. A
-aposentadoria está fechada; `apps/imagedx/` fica só como histórico versionado.
+aposentadoria está fechada.
+
+O fonte fica **guardado de propósito** em `apps/imagedx/`, versionado e intacto,
+para o caso de alguém precisar dele no futuro. Voltar atrás é desfazer um commit
+só (`Aposenta o ImageDx da suite`), que concentra a chave nas listas de build e
+o `WantImageDx` do instalador.
 
 ## 7. Suíte hoje
 
