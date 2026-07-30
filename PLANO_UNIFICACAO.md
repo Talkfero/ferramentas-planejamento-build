@@ -132,9 +132,9 @@ Executado (esta é a única parte do documento que virou código):
   `scripts/validate_layout.py` e o workflow: app fora de todas as listas;
 - `apps/imagedx/` **permanece versionado como histórico** e não entra em build.
 
-Pendência conhecida: confirmar se alguém montava prancha de imagem fora do
-fluxo de detalhamento do Coplan. Se aparecer, a saída barata é levar o "juntar
-imagens + legenda" para dentro do Coplan.
+Sem pendência: o usuário confirmou em 30/07/2026 que **ninguém mais usa** o
+ImageDx, nem para montar prancha de imagem fora do detalhamento do Coplan. A
+aposentadoria está fechada; `apps/imagedx/` fica só como histórico versionado.
 
 ## 7. Suíte hoje
 
