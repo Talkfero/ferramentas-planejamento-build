@@ -8,7 +8,7 @@ Parametrizavel via variavel de ambiente APPS_TO_BUILD:
   APPS_TO_BUILD=launcher,cadastro   -> subconjunto
 
 Chaves validas:
-  launcher, elexplan, diag, imagedx, unif, coplan_web, cadastro
+  launcher, elexplan, diag, unif, coplan_web, cadastro
 
 OBS: o antigo 'capex' (Ambiente Capex.exe) foi FUNDIDO dentro do Coplan
 (capex_engine vendorizado em coplanweb/) — virou feature do "Coplan Web.exe".
@@ -34,7 +34,7 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 # Selecao de apps
 # =====================================================================
 VALID_KEYS = {
-    'launcher', 'elexplan', 'diag', 'imagedx',
+    'launcher', 'elexplan', 'diag',
     'unif', 'coplan_web', 'cadastro',
 }
 
@@ -90,7 +90,6 @@ APPS_DIR = os.path.join(ROOT, "apps")
 LAUNCHER_DIR   = os.path.join(APPS_DIR, "launcher")
 ELEXPLAN_DIR   = os.path.join(APPS_DIR, "elexplan")
 DIAG_DIR       = os.path.join(APPS_DIR, "diagnostico")
-IMAGEDX_DIR    = os.path.join(APPS_DIR, "imagedx")
 UNIF_DIR       = os.path.join(APPS_DIR, "unificador")
 COPLAN_DIR     = os.path.join(APPS_DIR, "coplan")
 COPLAN_FRONTEND_DIR = os.path.join(COPLAN_DIR, "frontend")
@@ -135,10 +134,6 @@ APP_REQUIRED_FILES = {
     "diag": [
         os.path.join(DIAG_DIR, "diagnostico.py"),
         os.path.join(DIAG_DIR, "diagnostico.ico"),
-    ],
-    "imagedx": [
-        os.path.join(IMAGEDX_DIR, "codigo3_imagedx.py"),
-        os.path.join(IMAGEDX_DIR, "eng.ico"),
     ],
     "unif": [
         os.path.join(UNIF_DIR, "codigo4_unificador_de_arquivos.py"),
@@ -517,19 +512,6 @@ if _want('diag'):
     _analyses.append(a)
     _exes.append(_mk_exe(a, "Diagnostico de alimentadores",
                          os.path.join(DIAG_DIR, "diagnostico.ico")))
-
-if _want('imagedx'):
-    a = Analysis(
-        [os.path.join(IMAGEDX_DIR, "codigo3_imagedx.py")],
-        pathex=[ROOT, IMAGEDX_DIR],
-        datas=[],
-        hiddenimports=[],
-        excludes=COMMON_EXCLUDES,
-        cipher=block_cipher,
-    )
-    _analyses.append(a)
-    _exes.append(_mk_exe(a, "ImageDx- Detalhamento",
-                         os.path.join(IMAGEDX_DIR, "eng.ico")))
 
 if _want('unif'):
     a = Analysis(

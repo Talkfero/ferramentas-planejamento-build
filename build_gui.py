@@ -67,10 +67,6 @@ APPS: List[AppDef] = [
            "Relatórios e diagnósticos da rede",
            "apps/diagnostico/diagnostico.py",
            "apps/diagnostico/diagnostico.ico"),
-    AppDef("imagedx", "ImageDx — Detalhamento",
-           "Detalhamento visual",
-           "apps/imagedx/codigo3_imagedx.py",
-           "apps/imagedx/eng.ico"),
     AppDef("unif", "Unificador de arquivos",
            "Junta planilhas e CSVs",
            "apps/unificador/codigo4_unificador_de_arquivos.py",
@@ -97,8 +93,7 @@ APP_REQ_FILES = {
     "diag":       "apps/diagnostico/requirements.txt",
     "coplan_web": "apps/coplan/requirements-web.txt",
     "cadastro":   "apps/cadastro_viabilidades/main_web/requirements-web.txt",
-    # imagedx e unif tem requirements.txt PINADO (versoes ==) versionado aqui.
-    "imagedx":    "apps/imagedx/requirements.txt",
+    # unif tem requirements.txt PINADO (versoes ==) versionado aqui.
     "unif":       "apps/unificador/requirements.txt",
     # Elexplan inclui o Status de Medicao (usa openpyxl p/ XLSX de chaves).
     "elexplan":   "apps/elexplan/requirements.txt",

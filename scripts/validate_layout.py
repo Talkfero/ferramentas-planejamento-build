@@ -19,10 +19,6 @@ REQUIRED = {
         "apps/diagnostico/diagnostico.py",
         "apps/diagnostico/diagnostico.ico",
     ],
-    "imagedx": [
-        "apps/imagedx/codigo3_imagedx.py",
-        "apps/imagedx/eng.ico",
-    ],
     "unif": [
         "apps/unificador/codigo4_unificador_de_arquivos.py",
         "apps/unificador/Unificador.ico",

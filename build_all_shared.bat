@@ -11,8 +11,7 @@ rem   build_all_shared.bat launcher                -> apenas launcher
 rem   build_all_shared.bat launcher cadastro       -> subset
 rem
 rem Chaves validas:
-rem   launcher, elexplan, diag, imagedx, unif,
-rem   coplan_web, cadastro
+rem   launcher, elexplan, diag, unif, coplan_web, cadastro
 rem
 rem coplan_web  = Coplan Web.exe   (pywebview; ja embarca o motor CAPEX)
 rem elexplan    = Elexplan.exe     (ja inclui o Status de Medicao: chaves/
@@ -65,7 +64,7 @@ echo   %~nx0 all                    todos os apps
 echo   %~nx0 launcher               apenas launcher
 echo   %~nx0 launcher cadastro      subset (launcher + cadastro)
 echo.
-echo Chaves: launcher, elexplan, diag, imagedx, unif, coplan_web, cadastro
+echo Chaves: launcher, elexplan, diag, unif, coplan_web, cadastro
 echo.
 exit /b 0
 
@@ -78,10 +77,9 @@ echo     0  Todos
 echo     1  Launcher (Ferramentas de Planejamento)
 echo     2  Elexplan           (ja inclui o Status de Medicao)
 echo     3  Diagnostico de alimentadores
-echo     4  ImageDx - Detalhamento
-echo     5  Unificador de arquivos
-echo     6  Coplan Web         (pywebview, ja inclui o Capex)
-echo     7  Sistema de Cadastro (pywebview)
+echo     4  Unificador de arquivos
+echo     5  Coplan Web         (pywebview, ja inclui o Capex)
+echo     6  Sistema de Cadastro (pywebview)
 echo =====================================================
 echo  Dicas: pode combinar (ex. "1 3 7") ou digitar as chaves
 echo         (ex. "launcher diag cadastro coplan_web")
@@ -97,15 +95,15 @@ for %%N in (!CHOICE!) do (
   if "%%N"=="1"        set "KEY=launcher"
   if "%%N"=="2"        set "KEY=elexplan"
   if "%%N"=="3"        set "KEY=diag"
-  if "%%N"=="4"        set "KEY=imagedx"
-  if "%%N"=="5"        set "KEY=unif"
-  if "%%N"=="6"        set "KEY=coplan_web"
-  if "%%N"=="7"        set "KEY=cadastro"
+  if "%%N"=="4"        set "KEY=unif"
+  if "%%N"=="5"        set "KEY=coplan_web"
+  if "%%N"=="6"        set "KEY=cadastro"
   if /I "%%N"=="all"        set "KEY=all"
   if /I "%%N"=="launcher"   set "KEY=launcher"
   if /I "%%N"=="elexplan"   set "KEY=elexplan"
   if /I "%%N"=="diag"       set "KEY=diag"
-  if /I "%%N"=="imagedx"    set "KEY=imagedx"
+  rem Alias: "imagedx" aposentado; detalhamento vive no Coplan Web
+  if /I "%%N"=="imagedx"    set "KEY=coplan_web"
   if /I "%%N"=="unif"       set "KEY=unif"
   rem Alias: "coplan" antigo vira "coplan_web"
   if /I "%%N"=="coplan"     set "KEY=coplan_web"
@@ -157,7 +155,7 @@ if errorlevel 1 (
 
 rem Expande "all" para todas as chaves; senao usa a lista selecionada.
 set "DEP_KEYS=!APPS!"
-if /I "!APPS!"=="all" set "DEP_KEYS=launcher,elexplan,diag,imagedx,unif,coplan_web,cadastro"
+if /I "!APPS!"=="all" set "DEP_KEYS=launcher,elexplan,diag,unif,coplan_web,cadastro"
 
 set "DEP_FAIL="
 for %%K in (!DEP_KEYS!) do call :install_for %%K
@@ -245,8 +243,7 @@ if /I "!K!"=="cadastro" (
 rem Elexplan agora inclui Status de Medicao e Extracao PIM;
 rem usa o requirements.txt do proprio app (pandas/numpy/PySide6/openpyxl/playwright).
 if /I "!K!"=="elexplan"   set "REQ=apps\elexplan\requirements.txt"
-rem imagedx e unif tem requirements.txt PINADO (versoes ==) no proprio app.
-if /I "!K!"=="imagedx"    set "REQ=apps\imagedx\requirements.txt"
+rem unif tem requirements.txt PINADO (versoes ==) no proprio app.
 if /I "!K!"=="unif"       set "REQ=apps\unificador\requirements.txt"
 
 if defined REQ  goto install_req

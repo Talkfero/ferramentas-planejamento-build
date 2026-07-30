@@ -7,7 +7,6 @@
 ;   ISCC /DAPP_ONLY=launcher    Setup_turbinado.iss  -> apenas launcher
 ;   ISCC /DAPP_ONLY=elexplan    Setup_turbinado.iss  -> apenas elexplan
 ;   ISCC /DAPP_ONLY=diag        Setup_turbinado.iss
-;   ISCC /DAPP_ONLY=imagedx     Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=unif        Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=coplan_web  Setup_turbinado.iss   (pywebview; ja inclui Capex)
 ;   ISCC /DAPP_ONLY=status      Setup_turbinado.iss
@@ -21,6 +20,10 @@
 ;     Coplan Web.exe (regra user 2026-06-18).
 ;   * As chaves antigas "coplan" e "capex" sao aceitas como alias de
 ;     "coplan_web" pra retrocompat (viram coplan_web automaticamente).
+;   * O ImageDx foi APOSENTADO (2026-07-30): o detalhamento (PPTX + KML) e
+;     feito no Coplan Web. Nao existe mais "ImageDx- Detalhamento.exe"; a
+;     chave "imagedx" vira alias de "coplan_web" e o instalador remove o exe
+;     e o atalho de quem ja tinha a suite instalada.
 ;
 ; Entrada esperada:
 ;   dist\FerramentasCompartilhadas\_internal\...  (compartilhado)
@@ -52,11 +55,21 @@
   #define APP_ONLY "elexplan"
 #endif
 
+; Alias retrocompat: "imagedx" foi aposentado (30/07/2026). O detalhamento
+; (PPTX + KML) e feito no Coplan Web (core/services/detalhamento_pptx.py e
+; kml_geo.py); nao ha mais ImageDx- Detalhamento.exe. Redireciona pro coplan_web.
+#if APP_ONLY == "imagedx"
+  #undef APP_ONLY
+  #define APP_ONLY "coplan_web"
+#endif
+
 #define IncludeAll    (APP_ONLY == "all")
 #define WantLauncher  (IncludeAll || APP_ONLY == "launcher")
 #define WantElexplan  (IncludeAll || APP_ONLY == "elexplan")
 #define WantDiag      (IncludeAll || APP_ONLY == "diag")
-#define WantImageDx   (IncludeAll || APP_ONLY == "imagedx")
+; ImageDx aposentado (30/07/2026): o detalhamento vive no Coplan Web. Mantido
+; como 0 para compilar fora todos os blocos `#if WantImageDx` antigos.
+#define WantImageDx   (0)
 #define WantUnif      (IncludeAll || APP_ONLY == "unif")
 #define WantCoplanWeb (IncludeAll || APP_ONLY == "coplan_web")
 ; Capex fundido no Coplan (capex_engine): nunca ha exe/componente capex proprio.
@@ -275,6 +288,11 @@ Type: files;          Name: "{app}\Ambiente Capex.exe.config"
 ; Remove o Status de medicao.exe de bundles antigos: foi fundido dentro do
 ; Elexplan.exe (abas Chaves/Status/Estatistica), nao ha mais exe separado.
 Type: files;          Name: "{app}\Status de medicao.exe"
+; Remove o ImageDx de instalacoes anteriores: aposentado em 30/07/2026, o
+; detalhamento (PPTX + KML) e feito no Coplan Web. Tira tambem o atalho, senao
+; sobra um item quebrado no menu Iniciar de quem ja tinha a suite instalada.
+Type: files;          Name: "{app}\ImageDx- Detalhamento.exe"
+Type: files;          Name: "{group}\ImageDx - Detalhamento.lnk"
 
 [Files]
 ; ------------------- NUCLEO -------------------

@@ -1,11 +1,10 @@
 # Ferramentas de Planejamento - build completo
 
-Empacotador Windows para os 7 aplicativos:
+Empacotador Windows para os 6 aplicativos:
 
 - Ferramentas de Planejamento / launcher
 - Elexplan (ja inclui o **Status de Medicao**: chaves/rebalanceamento, status PIM e estatistica)
 - Diagnostico de alimentadores
-- ImageDx - Detalhamento
 - Unificador de arquivos
 - Coplan Web (ja inclui o **Ambiente Capex** embarcado — `capex_engine`)
 - Sistema de Cadastro
@@ -21,6 +20,14 @@ Empacotador Windows para os 7 aplicativos:
 > chaves + otimizador de rebalanceamento de fases, Status PIM por alimentador e
 > Analise Estatistica) viraram abas do **Elexplan.exe**. A chave `status`
 > continua aceita como alias de `elexplan`.
+
+> **ImageDx aposentado (2026-07-30):** o *ImageDx - Detalhamento* deixou de ter
+> exe e componente proprios. O detalhamento (PPTX + KML da Daimon) e feito no
+> **Coplan Web**, em `coplanweb/core/services/detalhamento_pptx.py` e
+> `kml_geo.py`. A chave `imagedx` continua aceita como alias de `coplan_web`, e
+> o instalador remove o `ImageDx- Detalhamento.exe` e o atalho de quem ja tinha
+> a suite instalada. O fonte segue versionado em `apps/imagedx/` apenas como
+> historico — nao entra em nenhum build.
 
 O instalador usa Inno Setup com `PrivilegesRequired=lowest` e instala em
 `{localappdata}\Programs\Ferramentas de Planejamento`, portanto nao exige
@@ -47,8 +54,9 @@ Cada build publica uma unica release com a tag fixa `latest`: o workflow apaga a
 releases e os artifacts antigos e recria a release com o instalador novo, entao a
 pagina de Releases sempre tem apenas o ultimo build.
 
-O workflow monta `apps/` a partir dos repos ativos no GitHub e usa os dois apps
-locais versionados aqui (`imagedx` e `unificador`).
+O workflow monta `apps/` a partir dos repos ativos no GitHub e usa o app local
+versionado aqui (`unificador`). A pasta `apps/imagedx/` continua versionada como
+historico do app aposentado, mas nao entra em nenhum build.
 
 > **Sistema de Cadastro:** o build compartilhado precisa espelhar o
 > `main_web/requirements-web.txt` do repo `sistemadecadastro`. Desde a automação

@@ -1,15 +1,24 @@
-# Plano — Lupa (Elexplan + Diagnóstico de Alimentadores)
+# Rascunho — levantamento sobre unificar Elexplan e Diagnóstico
 
-Rascunho de 30/07/2026. Objetivo: **um app só para análise de alimentador**,
-chamado **Lupa**, juntando o que o Elexplan faz (medição) com o que o
-Diagnóstico faz (rede simulada), e enxugar a suíte para quatro programas.
+> **Status: não aprovado.** A unificação foi avaliada em 30/07/2026 e **abortada
+> por decisão do usuário** — os dois apps continuam separados e nenhum código
+> foi fundido. O documento fica como levantamento técnico: se o assunto voltar,
+> o trabalho de investigação já está feito. **Não há nome de produto definido**
+> (as sugestões avaliadas foram descartadas).
 
-> Já houve duas fusões iguais a esta na suíte, e o padrão delas vale aqui:
-> Capex → Coplan e Status de Medição → Elexplan (ambas em 18/06/2026). Nas duas,
-> o app com **UI web e instalador** absorveu o outro, a chave antiga virou
-> **alias** e o README da suíte registrou a mudança.
+O que esta análise apurou e continua válido independentemente da fusão:
 
-## 1. Por que faz sentido
+1. `diagnostico_backend/` **não importa Qt** — está no docstring do
+   `interplan.py` e foi confirmado por varredura. Qualquer reuso daquela regra
+   sob outra UI não precisa de reescrita.
+2. Existem **cinco duplicações reais** entre os dois apps (§3), sendo a mais
+   cara a leitura de topologia do Interplan, que hoje tem duas implementações.
+3. O ImageDx já tinha sua função absorvida pelo Coplan — o que sustentou a
+   aposentadoria dele, executada em 30/07/2026 (§6).
+4. Os dois programas usam **os mesmos quatro patamares** e a mesma chave de
+   junção (nome do alimentador), então cruzá-los é barato quando for a hora.
+
+## 1. Por que a ideia apareceu
 
 Os dois programas respondem à mesma pergunta — *como está este alimentador?* —
 com metades diferentes da evidência:
@@ -29,16 +38,13 @@ O rebalanceamento de fases já mostrou a costura na prática: a sugestão nasceu
 Elexplan (aritmética das correntes por fase) mas só fica correta com a topologia
 que o Diagnóstico já lê — a fase precisa existir no ponto inicial da chave.
 
-## 2. Nome e identidade
+## 2. Identidade
 
-**Lupa** (decidido em 30/07/2026). O sufixo `-plan` de Coplan/Elexplan foi
-descartado de propósito: o produto fundido não é mais um "plan" da família, é a
-ferramenta de **olhar um alimentador de perto** — medição e rede na mesma lente.
-Nome de uma palavra, imediato, sem precisar de explicação, e livre para virar
-ícone (`Lupa.exe`) e verbo no dia a dia ("passa na Lupa").
+Não há nome definido — a discussão de nome foi encerrada sem escolha. O que
+ficou registrado como requisito, caso o tema volte: o nome precisa carregar o
+sentido de **diagnosticar e concluir**, não o de apenas observar.
 
-A identidade dos dois programas sobrevive **no vocabulário**: nenhum nome de
-ação muda. Continuam iguais *Processar*, *Extrair PIM*, *Demanda em Lote
+Requisito de identidade: nenhum nome de ação muda. Continuam iguais *Processar*, *Extrair PIM*, *Demanda em Lote
 Interplan*, *Status de Medição*, *Prioridades de obra*, *Comparativo anual*,
 *Sequências ≥67%*. Quem abria o Elexplan encontra as mesmas palavras; quem abria
 o Diagnóstico também.
@@ -59,7 +65,7 @@ Motivos concretos:
   interno para manter a tela antiga funcionando durante a migração.
 
 ```
-lupa/
+<app>/
   backend/            # regra pura, sem UI
     medicao/          # ex-elexplan: workprocess, relay, calculations, processing
     rede/             # ex-diagnostico: processing, interplan, exports
@@ -97,43 +103,49 @@ tem claro/escuro), mantendo do Diagnóstico os elementos que são marca dele —
 KPIs no topo, chips de status (Críticos/Atenção/OK), selo por linha e o
 destaque de valor fora do limite.
 
-## 5. Fases
+## 5. Fases (se um dia for retomado)
 
-| Fase | Entrega | Estado |
-|---|---|---|
-| **0** | Rebalanceamento com checagem de topologia, já no `diagnostico_backend/rebalanceamento.py` (usa `load_chaves_coords` e o *snap* existentes) | **feito**, falta ligar na UI |
-| **1** | Monorepo: `diagnostico_backend` entra no repo do Elexplan como `backend/rede/`, sem mudar comportamento. Suíte de testes dos dois juntas, verdes | |
-| **2** | `backend/comum/`: uma só leitura de CSV do Interplan, um só *snap* de chave, um só exportador Excel. Remove as duplicatas da tabela acima | |
-| **3** | UI web da área **Rede**: diagnóstico por alimentador, prioridades, sequências, comparativo anual. Qt do Diagnóstico vira `legado_qt/` (aposentado, executável) | |
-| **4** | Tela **Alimentador X** (medição × rede) e rebalanceamento com as duas evidências | |
-| **5** | Instalador: um componente só no lugar de `app_elexplan` + `app_diag`; chaves `elexplan`, `diag` e `status` viram alias; launcher e README atualizados | |
-| **6** | Aposentar ImageDx (ver §6) | |
+| Fase | Entrega |
+|---|---|
+| **1** | Monorepo: `diagnostico_backend` entra como pacote do outro app, sem mudar comportamento. Suítes de teste juntas, verdes |
+| **2** | `comum/`: uma só leitura de CSV do Interplan, um só *snap* de chave, um só exportador Excel |
+| **3** | UI web da área **Rede**; Qt do Diagnóstico vira legado executável |
+| **4** | Tela **Alimentador X** (medição × rede) |
+| **5** | Instalador: um componente no lugar de `app_elexplan` + `app_diag`; chaves antigas viram alias |
 
 Ordem pensada para o app nunca ficar quebrado: até a fase 3 os dois exes atuais
 continuam existindo.
 
-## 6. ImageDx
+## 6. ImageDx — aposentado em 30/07/2026
 
 `codigo3_imagedx.py` são 242 linhas de PySide6 + Pillow: junta imagens, aplica
 legenda e redimensiona. O **detalhamento de verdade** (PPTX + KML da Daimon) já
 mora no Coplan (`coplanweb/core/services/detalhamento_pptx.py` e `kml_geo.py`),
-que é o mesmo caminho das fusões anteriores — a função já está absorvida.
+o mesmo caminho das fusões anteriores — a função já estava absorvida.
 
-Antes de remover, confirmar com quem usa: existe alguém montando prancha de
-imagem **fora** do fluxo de detalhamento do Coplan? Se sim, a saída barata é
-levar o "juntar imagens + legenda" para dentro do Coplan como uma ação do
-detalhamento, e só então tirar o componente `app_imagedx` do instalador.
+Executado (esta é a única parte do documento que virou código):
 
-## 7. Suíte depois da unificação
+- `Setup_turbinado.iss`: `WantImageDx = 0`, chave `imagedx` vira alias de
+  `coplan_web`, e o `[InstallDelete]` remove o exe e o atalho de quem já tinha a
+  suíte instalada;
+- `multi_apps.spec`, `build_gui.py`, `build_all_shared.bat`,
+  `scripts/validate_layout.py` e o workflow: app fora de todas as listas;
+- `apps/imagedx/` **permanece versionado como histórico** e não entra em build.
+
+Pendência conhecida: confirmar se alguém montava prancha de imagem fora do
+fluxo de detalhamento do Coplan. Se aparecer, a saída barata é levar o "juntar
+imagens + legenda" para dentro do Coplan.
+
+## 7. Suíte hoje
 
 | App | Situação |
 |---|---|
 | Sistema de Cadastro | mantém |
 | Coplan Web (com Capex e Detalhamento) | mantém |
 | Unificador de arquivos | mantém |
-| **Lupa** (Elexplan + Diagnóstico) | fusão |
+| Elexplan e Diagnóstico | **seguem separados** (fusão abortada) |
 | ImageDx | aposentado (§6) |
-| Launcher | mantém, com um card a menos |
+| Launcher | mantém; o card do ImageDx some sozinho (ele varre executáveis) |
 
 Lembrete de release da suíte: `apps/` no repo de build é **clone descartável da
 branch default** de cada repo. Nada entra no instalador enquanto não estiver na
@@ -160,7 +172,6 @@ branch default** de cada repo. Nada entra no instalador enquanto não estiver na
 
 **Fechadas em 30/07/2026:**
 
-- **Nome: Lupa** (ver §2).
 - **Base do rebalanceamento: corrente do tronco** — o trecho de maior carga do
   alimentador, o mesmo ponto onde o diagnóstico calcula o %Desbal. NEMA. Assim
   o Δspread da sugestão é o ganho no número que o laudo reporta. Já é o padrão
@@ -169,7 +180,6 @@ branch default** de cada repo. Nada entra no instalador enquanto não estiver na
   Elexplan (ela conta chaves em série em duplicidade e, no export real, produzia
   reduções de 0,03 A).
 
-**Em aberto:**
-
-1. **Repo base** — recomendado: o do Elexplan absorve (§3).
-2. **ImageDx**: alguém ainda usa fora do detalhamento do Coplan?
+- **ImageDx aposentado** — executado, ver §6.
+- **Unificação abortada** — os dois apps seguem separados. Se voltar, a
+  recomendação técnica registrada é o repo do Elexplan absorver (§3).
