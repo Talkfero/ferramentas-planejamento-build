@@ -176,10 +176,35 @@ historico do app aposentado, mas nao entra em nenhum build.
 
 ## Build local em Windows
 
+O caminho recomendado e' o `scripts\build_all_local.ps1`, que espelha o CI
+passo a passo (venv isolado, layout, PyInstaller, configs .NET, self-test do
+Coplan e o Inno Setup):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build_all_local.ps1
+powershell -ExecutionPolicy Bypass -File scripts\build_all_local.ps1 -Apps coplan_web -SkipInstaller
+```
+
+> **Precisa ser Python 3.12** — a mesma minor do CI. Nao e' preciosismo: as
+> extensoes C (`.pyd` de pandas/numpy) e a `pythonXYZ.dll` entram no `_internal`
+> com a ABI do interpretador que compilou, e o `_internal` e' **compartilhado**.
+> Compilar um app noutra minor e junta-lo ao resto deixa o `.exe` de um app
+> carregando `.pyd` de outra versao. Numa maquina com varios Pythons o `python`
+> do PATH pode nao ser o 3.12, entao o script resolve pelo **py launcher**
+> (`py -3.12`), recria o venv se ele for de outra minor, e **falha cedo** se o
+> 3.12 nao existir (`winget install -e --id Python.Python.3.12`).
+
+O Inno Setup pode estar instalado **por usuario**
+(`%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe`) em vez de em
+`Program Files (x86)`; o script procura nos dois. Instalar:
+`winget install -e --id JRSoftware.InnoSetup`.
+
+Passo a passo equivalente, se preferir na mao (use um Python 3.12):
+
 ```bat
 set BUILD_REPO_READ_TOKEN=<token-com-acesso-aos-repos>
 powershell -ExecutionPolicy Bypass -File scripts\prepare_apps.ps1
-python scripts\validate_layout.py --apps all
+py -3.12 scripts\validate_layout.py --apps all
 build_all_shared.bat all
 ISCC Setup_turbinado.iss
 ```
