@@ -341,6 +341,11 @@ Source: "{#SrcBundle}\Status de medicao.exe"; DestDir: "{app}"; Flags: ignorever
 
 ; Configs do .NET host para pywebview/pythonnet. Precisam ficar ao lado
 ; do .exe, nao dentro de _internal, para o .NET Framework ler no startup.
+; Elexplan entrou aqui em 31/07/2026, quando a suite passou a empacotar a UI
+; WEB dele (pywebview) no lugar do Qt legado.
+#if WantElexplan
+Source: "{#SrcBundle}\Elexplan.exe.config"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: {#CompElexplan}
+#endif
 #if WantCoplanWeb
 Source: "{#SrcBundle}\Coplan Web.exe.config"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: {#CompCoplanWeb}
 #endif
@@ -624,6 +629,7 @@ begin
 
 #if WantElexplan
   DeleteFileIfExists(AppDir + '\Elexplan.exe');
+  DeleteFileIfExists(AppDir + '\Elexplan.exe.config');
 #endif
 
 #if WantDiag
@@ -763,6 +769,15 @@ end;
 function WillNeedWebView2(): Boolean;
 begin
   Result := False;
+#if WantElexplan
+  // Elexplan virou pywebview em 31/07/2026 (UI web); depende do WebView2
+  // igual ao Cadastro e ao Coplan.
+  #if IncludeAll
+  if IsComponentSelected('app_elexplan') then Result := True;
+  #else
+  Result := True;
+  #endif
+#endif
 #if WantCadastro
   #if IncludeAll
   if IsComponentSelected('app_cadastro') then Result := True;

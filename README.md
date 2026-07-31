@@ -64,6 +64,18 @@ O workflow monta `apps/` a partir dos repos ativos no GitHub e usa o app local
 versionado aqui (`unificador`). A pasta `apps/imagedx/` continua versionada como
 historico do app aposentado, mas nao entra em nenhum build.
 
+> **Elexplan e a UI web (2026-07-31):** o Elexplan migrou para **pywebview**
+> (`codigo1_web.py` -> `elexplan.webui`) e o frontend Qt foi **aposentado, nao
+> removido** (`codigo1_elexplan.py`, empacotado so' pelo job `build-qt-legacy`
+> do proprio repo). Esta spec apontava para o entry Qt, entao o `Elexplan.exe`
+> da suite abria a **janela antiga** enquanto o `Elexplan_Setup.exe` do repo
+> proprio ja trazia a web. A receita canonica e' o job **build-web** de
+> `.github/workflows/build-exe.yml` no repo do Elexplan; ao mexer no
+> empacotamento dele, espelhe aquele job. O `elexplan/webui/static/` (HTML/CSS/
+> JS/uPlot) **precisa** entrar como `datas` — sem ele a janela abre em branco —
+> e o app entrou na lista de apps pywebview do `finalize_bundle.ps1`,
+> `validate_runtime_bundle.ps1` e do aviso de WebView2 do instalador.
+
 > **Sistema de Cadastro:** o build compartilhado precisa espelhar o
 > `main_web/requirements-web.txt` do repo `sistemadecadastro`. Desde a automação
 > SAP/1ª Medida, isso inclui leitura de PDF/7z/e-mail (`pypdf`, `py7zr`,
