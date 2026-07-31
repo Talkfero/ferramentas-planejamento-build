@@ -101,6 +101,29 @@ o codigo-fonte dos apps. E' exatamente isso que deixa reaproveitar o bundle
 quando so' o codigo do Coplan mudou. Mudou dependencia? A chave muda, o cache
 nao bate e o workflow **cai sozinho para build completo**, avisando no log.
 
+### Onde o tempo do build realmente vai
+
+Medido no run `30637305478` (build completo, 30m45s):
+
+| fase | tempo | % |
+|---|---|---|
+| checkout + clones dos apps | 0:28 | 2% |
+| `pip` (baixar/instalar libs) | 4:19 | 14% |
+| **PyInstaller** | **20:13** | **66%** |
+| Inno Setup (lzma2/max sobre ~600 MB) | 4:30 | 15% |
+| publicar release | ~1:30 | 5% |
+
+O gargalo e' o **PyInstaller**, nao o download das libs — por isso o
+`rebuild_only` (que corta as Analysis dos apps que nao mudaram) rende muito
+mais que o cache do pip. Os dois estao ligados assim mesmo: ha um
+`actions/cache` para os wheels do pip (`PIP_CACHE_DIR`), que recupera boa parte
+daqueles 4 min. Ele usa `restore-keys` com prefixo de proposito — o cache do
+pip e' aditivo e serve mesmo quando um requirements mudou, ao contrario do
+cache do bundle, que exige match exato.
+
+Para referencia local: um `build_all_local.ps1 -Apps coplan_web` leva ~2,3 min
+de PyInstaller nesta maquina, com o venv e o cache do pip ja quentes.
+
 Duas consequencias que valem saber:
 
 - **So' o build completo alimenta o cache.** Um bundle incremental e' mistura

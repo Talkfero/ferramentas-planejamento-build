@@ -9,6 +9,9 @@ __pycache__/
 # venv isolado do build local (scripts/build_all_local.ps1)
 .build_venv/
 
+# cache de wheels do pip (PIP_CACHE_DIR no workflow; so' existe no runner)
+.pipcache/
+
 # apps montados pelo prepare_apps(.ps1|_local.ps1) a partir dos repos.
 # imagedx e unificador sao versionados aqui e NAO entram no ignore.
 apps/launcher/
