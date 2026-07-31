@@ -12,7 +12,11 @@ REQUIRED = {
         "apps/launcher/eng.ico",
     ],
     "elexplan": [
-        "apps/elexplan/codigo1_elexplan.py",
+        # UI WEB (pywebview) -- o que a suite empacota desde 31/07/2026.
+        # codigo1_elexplan.py (Qt) segue no repo, aposentado, e nao entra aqui.
+        "apps/elexplan/codigo1_web.py",
+        "apps/elexplan/elexplan/webui/static/index.html",
+        "apps/elexplan/elexplan/webui/app.py",
         "apps/elexplan/Elexplan.ico",
     ],
     "diag": [
@@ -42,6 +46,14 @@ REQUIRED = {
 }
 
 REQUIRED_TEXT = {
+    # A UI web do Elexplan e' pywebview. Se o requirements do app perder essa
+    # dependencia, o build_all_shared.bat instala o venv sem ela e o
+    # collect_all("webview") volta vazio -- o .exe abre e fecha.
+    "elexplan": {
+        "apps/elexplan/requirements.txt": [
+            "pywebview",
+        ],
+    },
     "cadastro": {
         "apps/cadastro_viabilidades/main_web/requirements-web.txt": [
             "extract-msg",

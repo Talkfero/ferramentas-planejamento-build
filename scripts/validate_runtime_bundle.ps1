@@ -13,7 +13,9 @@ if (-not (Test-Path $Dist)) {
 
 $tokens = @()
 if ([string]::IsNullOrWhiteSpace($Apps) -or $Apps.Trim().ToLowerInvariant() -eq "all") {
-    $tokens = @("coplan_web", "cadastro")
+    # elexplan entrou na lista em 31/07/2026: a suite passou a empacotar a UI
+    # WEB (pywebview) dele, entao ele tambem depende de WebView2/pythonnet.
+    $tokens = @("elexplan", "coplan_web", "cadastro")
 } else {
     $tokens = $Apps.ToLowerInvariant().Replace(";", ",").Split(",") |
         ForEach-Object { $_.Trim() } |
@@ -30,6 +32,7 @@ $tokens = $tokens | ForEach-Object {
 }
 
 $webApps = @{
+    "elexplan" = "Elexplan.exe"
     "coplan_web" = "Coplan Web.exe"
     "cadastro" = "Sistema de Cadastro.exe"
 }

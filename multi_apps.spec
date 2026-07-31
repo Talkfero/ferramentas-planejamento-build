@@ -89,6 +89,17 @@ APPS_DIR = os.path.join(ROOT, "apps")
 # Cada app mora em apps/<nome>/ com seus .py + icones.
 LAUNCHER_DIR   = os.path.join(APPS_DIR, "launcher")
 ELEXPLAN_DIR   = os.path.join(APPS_DIR, "elexplan")
+# Entry point do Elexplan: a UI DISTRIBUIDA e' a WEB (pywebview), em
+# codigo1_web.py -> elexplan.webui.app. O Qt (codigo1_elexplan.py, que importa
+# elexplan.frontend.*) foi APOSENTADO em 30/07/2026 e segue no repo apenas como
+# legado, empacotado pelo job "build-qt-legacy" do proprio Elexplan.
+#
+# Ate 31/07/2026 esta spec apontava para codigo1_elexplan.py, entao o
+# "Elexplan.exe" da suite abria a janela Qt antiga -- o repo migrou, a receita
+# do instalador compartilhado nao. Se for mexer aqui, a receita comprovada e'
+# o job "build-web" de .github/workflows/build-exe.yml do repo do Elexplan.
+ELEXPLAN_ENTRY = os.path.join(ELEXPLAN_DIR, "codigo1_web.py")
+ELEXPLAN_STATIC_DIR = os.path.join(ELEXPLAN_DIR, "elexplan", "webui", "static")
 DIAG_DIR       = os.path.join(APPS_DIR, "diagnostico")
 UNIF_DIR       = os.path.join(APPS_DIR, "unificador")
 COPLAN_DIR     = os.path.join(APPS_DIR, "coplan")
@@ -108,7 +119,7 @@ CADASTRO_WEB_DIR = os.path.join(CADASTRO_DIR, "main_web")
 DIST_NAME = "FerramentasCompartilhadas"
 block_cipher = None
 
-# Runtime hook compartilhado dos apps pywebview (coplan_web/cadastro):
+# Runtime hook compartilhado dos apps pywebview (elexplan/coplan_web/cadastro):
 # anti-zumbi (os._exit apos fechar janelas) + watchdog anti-congelamento
 # (auto-kill se a janela ficar "Nao respondendo" por ~30s). Sem ele, janela
 # congelada ignora o "Finalizar tarefa" do Gerenciador e o processo zumbi
@@ -128,7 +139,11 @@ APP_REQUIRED_FILES = {
         os.path.join(LAUNCHER_DIR, "eng.ico"),
     ],
     "elexplan": [
-        os.path.join(ELEXPLAN_DIR, "codigo1_elexplan.py"),
+        # UI WEB (pywebview) -- e' o Elexplan distribuido desde 30/07/2026.
+        # codigo1_elexplan.py (Qt) segue no repo, aposentado, e NAO e' o que
+        # entra na suite. Ver ELEXPLAN_ENTRY abaixo.
+        os.path.join(ELEXPLAN_DIR, "codigo1_web.py"),
+        os.path.join(ELEXPLAN_DIR, "elexplan", "webui", "static", "index.html"),
         os.path.join(ELEXPLAN_DIR, "Elexplan.ico"),
     ],
     "diag": [
@@ -411,6 +426,40 @@ def _coplan_web_datas():
     return datas
 
 
+def _elexplan_web_datas():
+    """Frontend web do Elexplan (pywebview) + docs que a UI abre.
+
+    Espelha os `--add-data` do job **build-web** de
+    `.github/workflows/build-exe.yml` no repo do Elexplan -- a receita
+    comprovada do `Elexplan_Setup.exe`. Estrutura no bundle:
+
+      _internal/Elexplan.ico
+      _internal/pim_config.json
+      _internal/docs/CRITERIOS_DE_CALCULO.md
+      _internal/docs/FORMATO_DE_ARQUIVOS.md
+      _internal/elexplan/webui/static/**   (index.html, css/, js/, vendor/uPlot)
+
+    Sem o `static/` a janela do pywebview abre EM BRANCO: HTML/CSS/JS nao sao
+    modulos Python, entao a analise estatica do PyInstaller nao os enxerga.
+    """
+    datas = []
+    for src, dst in (
+        (os.path.join(ELEXPLAN_DIR, "Elexplan.ico"), "."),
+        (os.path.join(ELEXPLAN_DIR, "pim_config.json"), "."),
+        (os.path.join(ELEXPLAN_DIR, "docs", "CRITERIOS_DE_CALCULO.md"), "docs"),
+        (os.path.join(ELEXPLAN_DIR, "docs", "FORMATO_DE_ARQUIVOS.md"), "docs"),
+    ):
+        if os.path.isfile(src):
+            datas.append((src, dst))
+
+    # Arvore completa do static/ preservando as subpastas (css, js, vendor).
+    for dirpath, _dirnames, filenames in os.walk(ELEXPLAN_STATIC_DIR):
+        destino = os.path.relpath(dirpath, ELEXPLAN_DIR)
+        for nome in filenames:
+            datas.append((os.path.join(dirpath, nome), destino))
+    return datas
+
+
 def _cadastro_datas():
     """Frontend do Cadastro web (pywebview).
 
@@ -472,17 +521,28 @@ if _want('launcher'):
                          os.path.join(LAUNCHER_DIR, "eng.ico")))
 
 if _want('elexplan'):
-    elexplan_entry = os.path.join(ELEXPLAN_DIR, "codigo1_elexplan.py")
+    # Elexplan WEB (pywebview), nao o Qt legado -- ver ELEXPLAN_ENTRY.
+    # Precisa das mesmas pecas dos outros apps pywebview da suite:
+    # collect_all de webview/pythonnet/clr_loader (DLLs nativas do WebView2 e
+    # do backend .NET, invisiveis para a analise estatica) e o runtime hook
+    # anti-zumbi. Sem o collect_all, o .exe abre e fecha (ImportError nativo).
     a = Analysis(
-        [elexplan_entry],
+        [ELEXPLAN_ENTRY],
         pathex=[ROOT, ELEXPLAN_DIR],
-        binaries=PIM_EXTRA_BINARIES,
-        datas=_existing_datas([
-            (os.path.join(ELEXPLAN_DIR, "pim_config.json"), "."),
-        ]) + PIM_EXTRA_DATAS,
+        binaries=PIM_EXTRA_BINARIES + WEBVIEW_BINARIES,
+        datas=_elexplan_web_datas() + PIM_EXTRA_DATAS + WEBVIEW_DATAS,
+        runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=(
-            _collect_submodules_safe("pim_backend", extra_paths=[ELEXPLAN_DIR])
+            ["webview"]
+            + _collect_submodules_safe("pim_backend", extra_paths=[ELEXPLAN_DIR])
+            # A UI web importa os modulos de elexplan.webui/backend de forma
+            # indireta (registro de abas, jobs); blinda contra o que a analise
+            # estatica nao segue de dentro de metodos.
+            + _collect_submodules_safe(
+                "elexplan.webui", "elexplan.backend", extra_paths=[ELEXPLAN_DIR]
+            )
             + PIM_EXTRA_HIDDEN
+            + WEBVIEW_HIDDEN
         ),
         excludes=COMMON_EXCLUDES,
         cipher=block_cipher,

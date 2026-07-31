@@ -14,7 +14,10 @@ if (Test-Path $ConfigDir) {
     }
 }
 
+# Elexplan entrou aqui em 31/07/2026, quando a suite passou a empacotar a UI
+# WEB (pywebview) em vez do Qt legado -- ver ELEXPLAN_ENTRY em multi_apps.spec.
 $expected = @(
+    "Elexplan.exe.config",
     "Coplan Web.exe.config",
     "Sistema de Cadastro.exe.config"
 )
