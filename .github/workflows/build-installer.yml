@@ -7,6 +7,10 @@ on:
         description: "Instalador a gerar: all ou uma chave unica (launcher,elexplan,diag,unif,coplan_web,cadastro). Capex fundido no coplan_web; Status de Medicao fundido no elexplan; ImageDx aposentado (detalhamento no coplan_web)."
         required: false
         default: "all"
+      rebuild_only:
+        description: "Recompilar SOMENTE estes apps e reaproveitar o resto do ultimo build completo (cache). Vazio = recompila tudo. Ex.: coplan_web"
+        required: false
+        default: ""
   push:
     branches: [main, master]
     paths:
@@ -24,6 +28,10 @@ permissions:
   contents: write
   actions: write
 
+env:
+  BUNDLE_DIR: dist/FerramentasCompartilhadas
+  BUNDLE_BASE_DIR: bundle_base
+
 jobs:
   build:
     runs-on: windows-latest
@@ -38,35 +46,132 @@ jobs:
         with:
           python-version: "3.12"
 
+      # prepare_apps.ps1 clona TODOS os repos de app, independente do que sera
+      # compilado. E' de proposito: a chave do cache abaixo hasheia os
+      # requirements dos apps, entao eles precisam existir aqui.
       - name: Prepare app sources
         shell: pwsh
         env:
           BUILD_REPO_READ_TOKEN: ${{ secrets.BUILD_REPO_READ_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
           .\scripts\prepare_apps.ps1
-          python .\scripts\validate_layout.py --apps $env:APPS_TO_BUILD
+
+      # =================================================================
+      # Modo de build
+      #
+      # rebuild_only VAZIO -> FULL: o PyInstaller monta o bundle inteiro.
+      #   Vale MESMO com apps=<uma chave>. O instalador parcial precisa de um
+      #   _internal COMPLETO porque o [InstallDelete] do Setup_turbinado.iss
+      #   apaga {app}\_internal antes de instalar -- um _internal so' do app
+      #   escolhido deixaria os OUTROS apps ja instalados sem as libs deles
+      #   (PySide6, playwright, snowflake, torch...).
+      #
+      # rebuild_only PREENCHIDO -> INCREMENTAL: recompila so' esses apps e
+      #   completa o bundle com o cache do ultimo build FULL. Muito mais
+      #   rapido, porque nem o pip nem o PyInstaller tocam nas arvores
+      #   pesadas dos apps que nao mudaram.
+      # =================================================================
+      - name: Decidir modo de build
+        id: mode
+        shell: pwsh
+        env:
+          REBUILD_ONLY: ${{ github.event.inputs.rebuild_only }}
+        run: |
+          $rebuild = "$env:REBUILD_ONLY".Trim().ToLowerInvariant()
+          if ($rebuild -eq "all") { $rebuild = "" }
+          if ($rebuild) {
+            "mode=incremental"       | Out-File $env:GITHUB_OUTPUT -Append
+            "apps_to_build=$rebuild" | Out-File $env:GITHUB_OUTPUT -Append
+          } else {
+            "mode=full"              | Out-File $env:GITHUB_OUTPUT -Append
+            "apps_to_build=all"      | Out-File $env:GITHUB_OUTPUT -Append
+          }
+
+      # A chave cobre SO' o que define o conjunto de dependencias -- nunca o
+      # codigo-fonte dos apps. E' isso que permite reaproveitar o bundle
+      # quando so' o codigo do Coplan mudou. Mexeu em requirements/spec/hooks?
+      # A chave muda, o cache nao bate e cai para build completo sozinho.
+      - name: Restaurar bundle base (cache)
+        id: bundle_cache
+        if: steps.mode.outputs.mode == 'incremental'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.BUNDLE_DIR }}
+          key: bundle-v1-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
+
+      - name: Confirmar modo (cache miss volta para build completo)
+        id: final_mode
+        shell: pwsh
+        run: |
+          $mode = "${{ steps.mode.outputs.mode }}"
+          $apps = "${{ steps.mode.outputs.apps_to_build }}"
+          if ($mode -eq "incremental" -and "${{ steps.bundle_cache.outputs.cache-hit }}" -ne "true") {
+            Write-Host "::warning::Bundle base nao encontrado no cache (as dependencias mudaram, ou este e o primeiro build com esta chave). Caindo para build COMPLETO."
+            $mode = "full"
+            $apps = "all"
+          }
+          Write-Host "[modo] $mode  |  APPS_TO_BUILD=$apps  |  instalador=${{ github.event.inputs.apps || 'all' }}"
+          "mode=$mode"          | Out-File $env:GITHUB_OUTPUT -Append
+          "apps_to_build=$apps" | Out-File $env:GITHUB_OUTPUT -Append
+
+      - name: Validar layout dos apps a compilar
+        shell: pwsh
+        run: |
+          python .\scripts\validate_layout.py --apps "${{ steps.final_mode.outputs.apps_to_build }}"
+
+      # build_all_shared.bat apaga dist\FerramentasCompartilhadas antes de
+      # compilar. Tira o bundle do cache da frente com um rename (instantaneo,
+      # mesmo volume) em vez de copiar ~1,5 GB.
+      - name: Separar o bundle base antes de compilar
+        if: steps.final_mode.outputs.mode == 'incremental'
+        shell: pwsh
+        run: |
+          Move-Item "${{ env.BUNDLE_DIR }}" "${{ env.BUNDLE_BASE_DIR }}" -Force
+          Write-Host "[bundle base] movido para ${{ env.BUNDLE_BASE_DIR }}"
 
       - name: Build shared PyInstaller bundle
         shell: cmd
         env:
-          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
+          APPS_TO_BUILD: ${{ steps.final_mode.outputs.apps_to_build }}
+          # No incremental o pip so' instala os requirements dos apps
+          # recompilados; pacote faltando tem de derrubar o build, nao virar
+          # aviso no log. Ver o cabecalho de STRICT_COLLECT em multi_apps.spec.
+          STRICT_COLLECT: ${{ steps.final_mode.outputs.mode == 'incremental' && '1' || '' }}
         run: |
           call build_all_shared.bat %APPS_TO_BUILD%
+
+      - name: Completar o bundle com o base do cache
+        if: steps.final_mode.outputs.mode == 'incremental'
+        shell: pwsh
+        run: |
+          .\scripts\overlay_bundle.ps1 -Base "${{ env.BUNDLE_BASE_DIR }}" -Fresh "${{ env.BUNDLE_DIR }}"
+          Remove-Item "${{ env.BUNDLE_BASE_DIR }}" -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Finalize bundle runtime configs
         shell: pwsh
         run: |
           .\scripts\finalize_bundle.ps1
 
+      # Sempre "all": nos dois modos o bundle sai completo, e este passo roda o
+      # self-test do Coplan (COPLAN_SELFTEST) -- e' o que pega um .exe com o
+      # grafo de modulos furado ANTES de publicar.
       - name: Validate pywebview runtime bundle
         shell: pwsh
-        env:
-          APPS_TO_BUILD: ${{ github.event.inputs.apps || 'all' }}
         run: |
-          .\scripts\validate_runtime_bundle.ps1 -Apps $env:APPS_TO_BUILD
+          .\scripts\validate_runtime_bundle.ps1 -Apps all
+
+      # So' o build FULL alimenta o cache. Um bundle incremental e' uma mistura
+      # (app novo + base antigo); cachear isso empilharia deriva a cada rodada.
+      # Assim o base e' sempre fruto de um build completo de verdade.
+      - name: Guardar bundle base (cache)
+        if: steps.final_mode.outputs.mode == 'full'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.BUNDLE_DIR }}
+          key: bundle-v1-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
 
       - name: Install Inno Setup
         shell: pwsh
@@ -76,9 +181,10 @@ jobs:
       - name: Build per-user installer
         shell: pwsh
         env:
-          INSTALLER_APP: ${{ github.event.inputs.apps || 'all' }}
+          INSTALLER_APP: ${{ github.event.inputs.apps }}
         run: |
           $apps = ($env:INSTALLER_APP ?? "all").Trim().ToLower()
+          if (-not $apps) { $apps = "all" }
           $args = @(".\Setup_turbinado.iss")
           if ($apps -and $apps -ne "all") {
             if ($apps.Contains(",") -or $apps.Contains(";")) {
@@ -107,7 +213,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: latest
           INSTALLER_APP: ${{ github.event.inputs.apps || 'all' }}
-          BUNDLE_APPS: ${{ github.event.inputs.apps || 'all' }}
+          BUNDLE_APPS: ${{ steps.final_mode.outputs.apps_to_build }}
+          BUILD_MODE: ${{ steps.final_mode.outputs.mode }}
           COMMIT_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -119,7 +226,7 @@ jobs:
             gh release delete $r.tagName --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
           }
           $assets = Get-ChildItem release\* | ForEach-Object { $_.FullName }
-          $notes = "Build automatico do instalador. Instalador: $($env:INSTALLER_APP). Runtime/bundle: $($env:BUNDLE_APPS). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
+          $notes = "Build automatico do instalador. Instalador: $($env:INSTALLER_APP). Modo: $($env:BUILD_MODE) (recompilado: $($env:BUNDLE_APPS)). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
           $ghArgs = @('release','create',$env:RELEASE_TAG) + $assets + @('--repo',$env:GITHUB_REPOSITORY,'--target',$env:COMMIT_SHA,'--title','Ferramentas de Planejamento - ultimo build','--notes',$notes,'--latest')
           gh @ghArgs
           Write-Host "Release publicada: https://github.com/$($env:GITHUB_REPOSITORY)/releases/tag/$($env:RELEASE_TAG)"
