@@ -38,6 +38,23 @@ $Root = (Resolve-Path "$PSScriptRoot\..").Path
 $VenvDir = Join-Path $env:TEMP "fplan_build_venv"
 $VenvPy = Join-Path $VenvDir "Scripts\python.exe"
 
+# ---------------------------------------------------------------------------
+# Minor version do Python do build. TEM de ser a mesma do CI
+# (.github/workflows/build-installer.yml: python-version "3.12") e a do bundle
+# publicado.
+#
+# Nao e' preciosismo: as extensoes C (.pyd de pandas/numpy/...) e a
+# pythonXYZ.dll entram no _internal com a ABI do interpretador que compilou.
+# Como o bundle e' COMPARTILHADO, buildar um app numa minor diferente e junta-lo
+# ao resto -- por overlay ou instalando por cima -- deixa o .exe de um app
+# carregando .pyd de outra versao, e ele quebra no import.
+#
+# Cuidado: em maquina com varios Pythons, `python` no PATH pode NAO ser o 3.12
+# (e' o caso da maquina do dev em 31/07/2026, onde o default e' 3.14). Por isso
+# resolvemos pelo py launcher em vez de confiar no PATH.
+# ---------------------------------------------------------------------------
+$PyMinor = "3.12"
+
 function Write-Step($msg) {
   Write-Host ""
   Write-Host "==================================================================" -ForegroundColor Cyan
@@ -45,24 +62,59 @@ function Write-Step($msg) {
   Write-Host "==================================================================" -ForegroundColor Cyan
 }
 
+function Get-PythonMinor([string]$Exe) {
+  $v = & $Exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
+  if ($LASTEXITCODE -ne 0 -or -not $v) { return $null }
+  return $v.Trim()
+}
+
+function Resolve-BuildPython([string]$Minor) {
+  # 1) py launcher pedindo a minor exata (caminho confiavel com varios Pythons).
+  if (Get-Command py -ErrorAction SilentlyContinue) {
+    $exe = & py "-$Minor" -c "import sys; print(sys.executable)" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $exe) { return $exe.Trim() }
+  }
+  # 2) o `python` do PATH, mas SO' se ja for a minor certa.
+  $p = Get-Command python -ErrorAction SilentlyContinue
+  if ($p -and (Get-PythonMinor $p.Source) -eq $Minor) { return $p.Source }
+  return $null
+}
+
 Push-Location $Root
 try {
   Write-Step "0/6  Ambiente"
   Write-Host "Repo build : $Root"
   Write-Host "Apps       : $Apps"
-  & python --version
+
+  $BuildPython = Resolve-BuildPython $PyMinor
+  if (-not $BuildPython) {
+    throw ("Python $PyMinor nao encontrado. O CI e o bundle publicado usam " +
+           "$PyMinor; compilar noutra minor gera _internal com ABI incompativel " +
+           "com os demais apps da suite. Instale com:  " +
+           "winget install -e --id Python.Python.$PyMinor")
+  }
+  Write-Host "Python base: $BuildPython (minor $PyMinor)"
 
   # --- venv isolado ---------------------------------------------------------
   if ($RecreateVenv -and (Test-Path $VenvDir)) {
     Write-Host "Removendo venv antigo: $VenvDir"
     Remove-Item -Recurse -Force $VenvDir
   }
+  # venv que sobrou de OUTRA minor nao serve -- recria em vez de gerar um
+  # bundle silenciosamente incompativel.
+  if (Test-Path $VenvPy) {
+    $venvMinor = Get-PythonMinor $VenvPy
+    if ($venvMinor -ne $PyMinor) {
+      Write-Host "venv existente e' $venvMinor (esperado $PyMinor) -- recriando."
+      Remove-Item -Recurse -Force $VenvDir
+    }
+  }
   if (-not (Test-Path $VenvPy)) {
-    Write-Step "Criando venv isolado em .build_venv"
-    & python -m venv $VenvDir
+    Write-Step "Criando venv isolado ($PyMinor) em $VenvDir"
+    & $BuildPython -m venv $VenvDir
     if ($LASTEXITCODE -ne 0) { throw "Falha ao criar o venv." }
   }
-  Write-Host "Python do build: $VenvPy"
+  Write-Host "Python do build: $VenvPy ($(Get-PythonMinor $VenvPy))"
   & $VenvPy -m pip install --upgrade pip wheel setuptools
   if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar pip no venv." }
 
