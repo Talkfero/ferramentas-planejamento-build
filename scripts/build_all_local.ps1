@@ -62,17 +62,39 @@ function Write-Step($msg) {
   Write-Host "==================================================================" -ForegroundColor Cyan
 }
 
+# PS 5.1: com $ErrorActionPreference = "Stop", QUALQUER linha em stderr de um
+# executavel nativo vira NativeCommandError TERMINANTE -- inclusive quando
+# redirecionada para $null. Sondar versao e' justamente o caso em que o
+# processo FALHA de proposito: venv corrompido (Scripts\python.exe sem
+# pyvenv.cfg, deixado por uma rodada anterior) responde "No pyvenv.cfg file",
+# e um `py -3.XX` inexistente tambem escreve em stderr. Sem baixar o EAP aqui,
+# a deteccao derruba o script que ela deveria salvar.
+function Invoke-PyProbe([string]$Exe, [string[]]$PyArgs) {
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = "SilentlyContinue"
+  try {
+    $out = & $Exe @PyArgs 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    $txt = ("$out").Trim()
+    if (-not $txt) { return $null }
+    return $txt
+  } catch {
+    return $null
+  } finally {
+    $ErrorActionPreference = $old
+  }
+}
+
 function Get-PythonMinor([string]$Exe) {
-  $v = & $Exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
-  if ($LASTEXITCODE -ne 0 -or -not $v) { return $null }
-  return $v.Trim()
+  if (-not $Exe -or -not (Test-Path $Exe)) { return $null }
+  return Invoke-PyProbe $Exe @("-c", "import sys; print('%d.%d' % sys.version_info[:2])")
 }
 
 function Resolve-BuildPython([string]$Minor) {
   # 1) py launcher pedindo a minor exata (caminho confiavel com varios Pythons).
   if (Get-Command py -ErrorAction SilentlyContinue) {
-    $exe = & py "-$Minor" -c "import sys; print(sys.executable)" 2>$null
-    if ($LASTEXITCODE -eq 0 -and $exe) { return $exe.Trim() }
+    $exe = Invoke-PyProbe "py" @("-$Minor", "-c", "import sys; print(sys.executable)")
+    if ($exe -and (Test-Path $exe)) { return $exe }
   }
   # 2) o `python` do PATH, mas SO' se ja for a minor certa.
   $p = Get-Command python -ErrorAction SilentlyContinue
@@ -100,12 +122,14 @@ try {
     Write-Host "Removendo venv antigo: $VenvDir"
     Remove-Item -Recurse -Force $VenvDir
   }
-  # venv que sobrou de OUTRA minor nao serve -- recria em vez de gerar um
-  # bundle silenciosamente incompativel.
+  # venv que sobrou de OUTRA minor -- ou corrompido, sem pyvenv.cfg -- nao
+  # serve. Recria, em vez de gerar um bundle silenciosamente incompativel ou
+  # morrer mais adiante num erro sem relacao aparente.
   if (Test-Path $VenvPy) {
     $venvMinor = Get-PythonMinor $VenvPy
     if ($venvMinor -ne $PyMinor) {
-      Write-Host "venv existente e' $venvMinor (esperado $PyMinor) -- recriando."
+      $comoEsta = if ($venvMinor) { "e' $venvMinor" } else { "esta quebrado" }
+      Write-Host "venv existente $comoEsta (esperado $PyMinor) -- recriando."
       Remove-Item -Recurse -Force $VenvDir
     }
   }
