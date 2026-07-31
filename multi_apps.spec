@@ -74,6 +74,25 @@ def _want(key: str) -> bool:
     return SELECTED_APPS is None or key in SELECTED_APPS
 
 
+# =====================================================================
+# STRICT_COLLECT=1 -> pacote que nao coleta DERRUBA o build.
+#
+# Por padrao _collect_all_safe/_collect_submodules_safe so' AVISAM quando um
+# pacote nao esta no venv, para um build parcial de app A nao morrer por causa
+# de dependencia do app B. Num build INCREMENTAL isso vira armadilha: o pip
+# instala apenas os requirements dos apps recompilados, e um pacote faltando
+# sairia so' como print no log -- gerando um .exe com o PYZ incompleto (ex.:
+# Build-up do Coplan sem matplotlib/pptx). O overlay com o bundle do cache NAO
+# conserta isso, porque os modulos puros viajam DENTRO do .exe recem-gerado.
+# Por isso o workflow liga STRICT_COLLECT no modo incremental.
+# =====================================================================
+STRICT_COLLECT = os.environ.get('STRICT_COLLECT', '').strip().lower() in (
+    '1', 'true', 'yes', 'on'
+)
+if STRICT_COLLECT:
+    print("[multi_apps.spec] STRICT_COLLECT=1: coleta que falhar derruba o build.")
+
+
 print(
     f"[multi_apps.spec] Apps selecionados: "
     f"{'TODOS' if SELECTED_APPS is None else sorted(SELECTED_APPS)}"
@@ -236,6 +255,14 @@ def _collect_all_safe(*pkgs):
         try:
             d, b, h = collect_all(pkg)
         except Exception as exc:  # pacote ausente no venv de build
+            if STRICT_COLLECT:
+                raise SystemExit(
+                    f"[multi_apps.spec] collect_all({pkg!r}) falhou: {exc}\n"
+                    "STRICT_COLLECT=1 (build incremental): o pacote PRECISA estar "
+                    "instalado. O bundle do cache nao conserta um PYZ incompleto "
+                    "dentro do .exe recem-gerado. Confira o requirements do app "
+                    "recompilado."
+                ) from exc
             print(f"[multi_apps.spec] collect_all({pkg!r}) falhou: {exc}")
             continue
         datas += d
@@ -265,6 +292,12 @@ def _collect_submodules_safe(*pkgs, extra_paths=()):
             try:
                 hiddenimports += collect_submodules(pkg)
             except Exception as exc:
+                if STRICT_COLLECT:
+                    raise SystemExit(
+                        f"[multi_apps.spec] collect_submodules({pkg!r}) falhou: "
+                        f"{exc}\nSTRICT_COLLECT=1 (build incremental): sem esses "
+                        "submodulos o .exe sai com o grafo de modulos furado."
+                    ) from exc
                 print(f"[multi_apps.spec] collect_submodules({pkg!r}) falhou: {exc}")
         return hiddenimports
     finally:
