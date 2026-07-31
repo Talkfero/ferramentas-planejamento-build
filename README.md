@@ -142,6 +142,13 @@ Cada build publica uma unica release com a tag fixa `latest`: o workflow apaga a
 releases e os artifacts antigos e recria a release com o instalador novo, entao a
 pagina de Releases sempre tem apenas o ultimo build.
 
+> **O build NAO roda sozinho no merge** (desde 31/07/2026). O gatilho `push` na
+> `main` foi removido: como cada build **republica a `latest` apagando a
+> anterior**, um merge de refatoracao substituia um instalador recem-validado, e
+> mergear duas PRs seguidas gerava dois builds disputando a mesma tag. Publicar
+> passou a ser ato deliberado — Actions -> *Build installer* -> *Run workflow*,
+> ou `gh workflow run "Build installer"`.
+
 O workflow monta `apps/` a partir dos repos ativos no GitHub e usa o app local
 versionado aqui (`unificador`). A pasta `apps/imagedx/` continua versionada como
 historico do app aposentado, mas nao entra em nenhum build.

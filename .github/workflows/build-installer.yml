@@ -1,5 +1,18 @@
 name: Build installer
 
+# SO' roda quando alguem pede (workflow_dispatch). O gatilho `push` na main
+# saiu de proposito (31/07/2026, decisao do usuario): mexer no spec, num
+# script ou no .iss disparava um build de ~30min e REPUBLICAVA a release
+# `latest`, apagando a anterior. Efeitos ruins na pratica:
+#
+#   - um merge de refatoracao/documentacao substituia o instalador que
+#     acabara de ser publicado e validado;
+#   - mergear duas PRs seguidas gerava dois builds concorrentes disputando a
+#     mesma tag `latest`;
+#   - publicar na rede virava corrida contra o proximo merge.
+#
+# Publicar passa a ser ato deliberado. Para gerar: aba Actions -> "Build
+# installer" -> Run workflow (ou `gh workflow run "Build installer"`).
 on:
   workflow_dispatch:
     inputs:
@@ -11,19 +24,6 @@ on:
         description: "Recompilar SOMENTE estes apps e reaproveitar o resto do ultimo build completo (cache). Vazio = recompila tudo. Ex.: coplan_web"
         required: false
         default: ""
-  push:
-    branches: [main, master]
-    paths:
-      - "multi_apps.spec"
-      - "build_all_shared.bat"
-      - "Setup_turbinado.iss"
-      - "build_gui.py"
-      - "requirements.lock.txt"
-      - "scripts/**"
-      - "app_configs/**"
-      - "runtime_hooks/**"
-      - ".github/workflows/build-installer.yml"
-
 permissions:
   contents: write
   actions: write
