@@ -155,10 +155,29 @@ jobs:
           Move-Item "${{ env.BUNDLE_DIR }}" "${{ env.BUNDLE_BASE_DIR }}" -Force
           Write-Host "[bundle base] movido para ${{ env.BUNDLE_BASE_DIR }}"
 
+      # Os .exe do PyInstaller saiam SEM metadado de versao (FileVersion,
+      # ProductName e CompanyName vazios). Binario anonimo, sem assinatura e
+      # que lanca outros processos e' o perfil que a heuristica do Defender
+      # marca -- foi o que bloqueou o launcher no 1.2.1 (erro 225). O spec
+      # preenche o VSVersionInfo a partir daqui; a versao sai do proprio
+      # Setup_turbinado.iss para nao existir uma segunda fonte de verdade.
+      - name: Resolver a versao da suite (do .iss)
+        id: suite_version
+        shell: pwsh
+        run: |
+          $m = Select-String -Path .\Setup_turbinado.iss `
+                 -Pattern '^\s*#define\s+AppVersion\s+"([^"]+)"' |
+               Select-Object -First 1
+          if (-not $m) { throw "AppVersion nao encontrada em Setup_turbinado.iss" }
+          $v = $m.Matches[0].Groups[1].Value
+          Write-Host "[versao] APP_VERSION=$v"
+          "value=$v" | Out-File $env:GITHUB_OUTPUT -Append
+
       - name: Build shared PyInstaller bundle
         shell: cmd
         env:
           APPS_TO_BUILD: ${{ steps.final_mode.outputs.apps_to_build }}
+          APP_VERSION: ${{ steps.suite_version.outputs.value }}
           # No incremental o pip so' instala os requirements dos apps
           # recompilados; pacote faltando tem de derrubar o build, nao virar
           # aviso no log. Ver o cabecalho de STRICT_COLLECT em multi_apps.spec.

@@ -514,6 +514,66 @@ _analyses: list = []
 _exes: list = []
 
 
+# ---------------------------------------------------------------------------
+# Metadados de versao (VSVersionInfo) por executavel.
+#
+# Ate 04/08/2026 os seis .exe saiam SEM nenhum metadado: FileVersion,
+# ProductName e CompanyName vazios (o unico com identidade era o unins000.exe,
+# que o Inno gera). Binario anonimo + sem assinatura + comportamento de lancar
+# outros processos e' o retrato que a heuristica do Defender marca -- foi o
+# `Ferramentas de Planejamento.exe` (2 MB, so' spawna processos) que passou a
+# ser bloqueado com ERROR_VIRUS_INFECTED (225) no 1.2.1.
+#
+# Preencher isto nao substitui a assinatura Authenticode, mas tira o binario
+# da categoria "executavel anonimo desconhecido" e declara corretamente quem
+# publica o que. A versao vem de APP_VERSION (o workflow passa a mesma do
+# .iss); sem ela, cai no default e o build nao quebra.
+# ---------------------------------------------------------------------------
+SUITE_VERSION = os.environ.get("APP_VERSION", "").strip() or "0.0.0"
+SUITE_COMPANY = "Arthur Cardoso"
+SUITE_NAME = "Ferramentas de Planejamento"
+
+
+def _version_tuple(texto):
+    partes = []
+    for pedaco in str(texto).split("."):
+        digitos = "".join(c for c in pedaco if c.isdigit())
+        partes.append(int(digitos) if digitos else 0)
+    while len(partes) < 4:
+        partes.append(0)
+    return tuple(partes[:4])
+
+
+def _mk_version_info(nome_exe):
+    """VSVersionInfo do PyInstaller. `None` se a API nao existir (o build
+    segue sem metadado em vez de falhar)."""
+    try:
+        from PyInstaller.utils.win32.versioninfo import (
+            FixedFileInfo, StringFileInfo, StringStruct, StringTable,
+            VarFileInfo, VarStruct, VSVersionInfo,
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    v = _version_tuple(SUITE_VERSION)
+    return VSVersionInfo(
+        ffi=FixedFileInfo(filevers=v, prodvers=v, mask=0x3F, flags=0x0,
+                          OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
+        kids=[
+            StringFileInfo([StringTable("040904B0", [
+                StringStruct("CompanyName", SUITE_COMPANY),
+                StringStruct("FileDescription", f"{nome_exe} - {SUITE_NAME}"),
+                StringStruct("FileVersion", SUITE_VERSION),
+                StringStruct("InternalName", nome_exe),
+                StringStruct("LegalCopyright", f"(c) {SUITE_COMPANY}"),
+                StringStruct("OriginalFilename", f"{nome_exe}.exe"),
+                StringStruct("ProductName", SUITE_NAME),
+                StringStruct("ProductVersion", SUITE_VERSION),
+            ])]),
+            VarFileInfo([VarStruct("Translation", [0x0409, 1200])]),
+        ],
+    )
+
+
 def _mk_exe(analysis, name, icon):
     pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=block_cipher)
     return EXE(
@@ -526,6 +586,7 @@ def _mk_exe(analysis, name, icon):
         console=False,
         disable_windowed_traceback=False,
         argv_emulation=False,
+        version=_mk_version_info(name),
     )
 
 
