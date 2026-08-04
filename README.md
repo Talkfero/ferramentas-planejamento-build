@@ -39,6 +39,25 @@ O instalador usa Inno Setup com `PrivilegesRequired=lowest` e instala em
 `{localappdata}\Programs\Ferramentas de Planejamento`, portanto nao exige
 administrador do usuario final.
 
+## Metadados dos executaveis (Defender)
+
+Os `.exe` do PyInstaller saiam **sem** `FileVersion`/`ProductName`/
+`CompanyName`. Um binario anonimo, sem assinatura, que lanca outros processos
+e' o perfil que a heuristica do Defender marca: em 04/08/2026 o launcher
+(`Ferramentas de Planejamento.exe`, 2 MB) passou a ser bloqueado com
+`ERROR_VIRUS_INFECTED` (225) em outras maquinas, enquanto os apps de 70-84 MB
+passavam.
+
+`multi_apps.spec::_mk_version_info()` preenche o `VSVersionInfo`; a versao vem
+do proprio `Setup_turbinado.iss` (passo `Resolver a versao da suite` exporta
+`APP_VERSION`). Corrigido e **testado em maquina real**.
+
+Isto **nao substitui assinatura Authenticode**. Nenhum binario da suite e
+assinado, entao um build futuro pode reacender o falso positivo.
+
+Ao trocar um `.exe` ja publicado na pasta de rede, **atualize tambem o
+`sha256`** correspondente no `latest.json` (uma entrada por app).
+
 ## Como gerar
 
 1. Configure o secret `BUILD_REPO_READ_TOKEN` ou `GH_PAT` com permissao de leitura nos repos privados `Talkfero/*`.
