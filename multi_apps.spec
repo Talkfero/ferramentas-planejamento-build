@@ -561,7 +561,12 @@ def _mk_version_info(nome_exe):
         kids=[
             StringFileInfo([StringTable("040904B0", [
                 StringStruct("CompanyName", SUITE_COMPANY),
-                StringStruct("FileDescription", f"{nome_exe} - {SUITE_NAME}"),
+                # O launcher se chama igual a suite; sem isto a descricao
+                # sairia "Ferramentas de Planejamento - Ferramentas de
+                # Planejamento" nas propriedades do arquivo.
+                StringStruct("FileDescription",
+                             nome_exe if nome_exe == SUITE_NAME
+                             else f"{nome_exe} - {SUITE_NAME}"),
                 StringStruct("FileVersion", SUITE_VERSION),
                 StringStruct("InternalName", nome_exe),
                 StringStruct("LegalCopyright", f"(c) {SUITE_COMPANY}"),
