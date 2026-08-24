@@ -1,0 +1,23 @@
+{
+  "coplanweb": {
+    "version": "1.3.1",
+    "url": "\\\\fs-celpa-02\\GEPLP\\COPLD\\10 - SOFTWARES\\Ferramentas de Planejamento\\FerramentasCompartilhadas-Setup-1.3.2.exe",
+    "sha256": "9ddbc5e866c179eb96ae14953dcfb6bd8e71a76ee62cb46c9fcb7f06dd76cc0a",
+    "notes": "Coplan 1.3.1\n\nResumo / Volumetria - Fisico por PI:\n\n- Todas as tabelas por PI podem ser exportadas de uma vez para PowerPoint, preservando as cores, larguras, textos e a aparencia exibida no programa.\n- A exportacao foi ajustada para evitar o erro de canvas contaminado (tainted canvas).\n- A coluna Observacao agora pode ser mostrada ou ocultada; o padrao e' ficar oculta.\n\nFiltros:\n\n- O filtro de obras aceita uma lista colada de CODs completos sem quebrar o conteudo interno de cada COD.\n\nCorrecao de escopo:\n\n- O campo Estudo Especial nao existe no COPLAN. Ele pertence somente ao Sistema de Cadastro, na Etapa de Fluxo.",
+    "min_version": "1.3.1"
+  },
+  "sistemadecadastro": {
+    "version": "1.2.2",
+    "url": "\\\\fs-celpa-02\\GEPLP\\COPLD\\10 - SOFTWARES\\Ferramentas de Planejamento\\FerramentasCompartilhadas-Setup-1.3.2.exe",
+    "sha256": "9ddbc5e866c179eb96ae14953dcfb6bd8e71a76ee62cb46c9fcb7f06dd76cc0a",
+    "notes": "Sistema de Cadastro 1.2.2\n\nEtapa de Fluxo:\n\n- Novo campo Estudo Especial?, com opcoes Sim/Nao e padrao Nao.\n- O valor e' salvo e recarregado com a viabilidade.\n- Bancos existentes recebem a nova coluna automaticamente, sem perder dados.\n- Quando a nota nao exige fluxo de carga, o campo e' limpo junto com os demais dados da etapa.",
+    "min_version": "1.2.2"
+  },
+  "elexplan": {
+    "version": "1.0.1",
+    "url": "\\\\fs-celpa-02\\GEPLP\\COPLD\\10 - SOFTWARES\\Ferramentas de Planejamento\\FerramentasCompartilhadas-Setup-1.3.2.exe",
+    "sha256": "9ddbc5e866c179eb96ae14953dcfb6bd8e71a76ee62cb46c9fcb7f06dd76cc0a",
+    "notes": "Elexplan 1.0.1\n\nArquivos TXT de rele:\n\n- Colunas P/Q acompanhadas de acumuladores MWH sao reconhecidas como MW/MVAr e normalizadas para kW/kVAr.\n- Quando o TXT nao traz as tensoes primarias, o programa procura uma correspondencia unica do alimentador na Planilha Apoio e calcula P = raiz(3) x tensao de linha x corrente media x fator de potencia.\n- A potencia medida e' mantida quando fica a ate 10% da calculada; acima disso, o programa usa a calculada.\n- Medida, calculada e valor escolhido ficam separados no grafico para auditoria.\n- Sem correspondencia unica de tensao, nenhuma tensao nominal e' presumida e a potencia medida e' preservada.",
+    "min_version": "1.0.1"
+  }
+}
