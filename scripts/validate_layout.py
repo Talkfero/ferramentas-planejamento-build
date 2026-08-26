@@ -52,6 +52,7 @@ REQUIRED_TEXT = {
     "elexplan": {
         "apps/elexplan/requirements.txt": [
             "pywebview",
+            "playwright",
         ],
     },
     "cadastro": {

@@ -271,6 +271,23 @@ def _collect_all_safe(*pkgs):
     return datas, binaries, hiddenimports
 
 
+def _collect_all_required(pkg):
+    """Coleta uma dependência de runtime e impede bundle incompleto."""
+    try:
+        datas, binaries, hiddenimports = collect_all(pkg)
+    except Exception as exc:
+        raise SystemExit(
+            f"[multi_apps.spec] dependencia obrigatoria {pkg!r} nao pode ser "
+            f"coletada: {exc}"
+        ) from exc
+    if not hiddenimports:
+        raise SystemExit(
+            f"[multi_apps.spec] collect_all({pkg!r}) nao encontrou modulos. "
+            "Confira a instalacao dos requirements antes de gerar o EXE."
+        )
+    return datas, binaries, hiddenimports
+
+
 def _collect_submodules_safe(*pkgs, extra_paths=()):
     """collect_submodules de cada pkg, tolerando ausencia.
 
@@ -340,7 +357,7 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
     "snowflake",
 )
 
-PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_safe(
+PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_required(
     "playwright"
 )
 PIM_EXTRA_DATAS = [

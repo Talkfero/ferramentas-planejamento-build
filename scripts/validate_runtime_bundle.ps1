@@ -137,4 +137,38 @@ if ($selectedWebApps -contains "coplan_web") {
     Write-Host "[validate_runtime_bundle] Coplan self-test OK (exit=$code). $detail"
 }
 
+# O PIM importa Playwright somente quando o navegador e' solicitado. Testar a
+# abertura normal do Elexplan nao alcanca esse caminho; o modo self-test inicia
+# e encerra o driver empacotado sem abrir browser nem janela.
+if ($selectedWebApps -contains "elexplan") {
+    $elexplanExe = Join-Path $Dist "Elexplan.exe"
+    $log = Join-Path ([System.IO.Path]::GetTempPath()) ("elexplan_selftest_{0}.log" -f ([guid]::NewGuid().ToString("N")))
+    if (Test-Path $log) { Remove-Item $log -Force }
+
+    $env:ELEXPLAN_SELFTEST = "1"
+    $env:ELEXPLAN_SELFTEST_LOG = $log
+    $code = $null
+    try {
+        $proc = Start-Process -FilePath $elexplanExe -PassThru -WindowStyle Hidden
+        $proc | Wait-Process -Timeout 60 -ErrorAction SilentlyContinue
+        if (-not $proc.HasExited) {
+            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+            throw "[validate_runtime_bundle] Elexplan self-test excedeu 60s."
+        }
+        $code = $proc.ExitCode
+    } finally {
+        Remove-Item Env:\ELEXPLAN_SELFTEST -ErrorAction SilentlyContinue
+        Remove-Item Env:\ELEXPLAN_SELFTEST_LOG -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path $log)) {
+        throw "[validate_runtime_bundle] Elexplan self-test nao gerou log (exit=$code)."
+    }
+    $detail = (Get-Content -Raw -Encoding UTF8 $log).Trim()
+    Remove-Item $log -Force -ErrorAction SilentlyContinue
+    if ($detail -notmatch "^OK:") {
+        throw "[validate_runtime_bundle] Elexplan self-test FALHOU (exit=$code). $detail"
+    }
+    Write-Host "[validate_runtime_bundle] Elexplan self-test OK (exit=$code). $detail"
+}
+
 Write-Host "[validate_runtime_bundle] runtime pywebview OK para: $($selectedWebApps -join ', ')"
