@@ -333,7 +333,7 @@ WEBVIEW_DATAS, WEBVIEW_BINARIES, WEBVIEW_HIDDEN = _collect_all_safe(
 
 # Leitura de pacote/anexos do Sistema de Cadastro. py7zr tem codecs/deps
 # nativas; extract_msg carrega submodulos/datas de forma lazy ao abrir e-mails
-# .msg anexados pelo SAP. Sentence Transformers/ONNX e o fallback local para
+# .msg anexados pelo SAP. ONNX direto e o fallback local para
 # formularios e normas que os parsers deterministas ainda nao reconhecem.
 CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_all_safe(
     "py7zr",
@@ -345,11 +345,9 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
     "brotli",
     "backports.zstd",
     "extract_msg",
-    "sentence_transformers",
-    "transformers",
-    "optimum",
     "onnxruntime",
     "tokenizers",
+    "huggingface_hub",
     # Snowflake: atualizacao automatica da Reserva Tecnica e a aba Consulta
     # (sucede o Oracle, desligado). O import e lazy em
     # mw_snowflake.conectar(), e o driver carrega backends/certificados que o
@@ -817,7 +815,7 @@ if _want('cadastro'):
             "pandas", "openpyxl", "sqlite3",
             # Leitura de formularios/pacotes e e-mails anexados.
             "pypdf", "py7zr", "extract_msg",
-            "sentence_transformers", "transformers", "optimum", "onnxruntime",
+            "mw_semantic", "onnxruntime", "tokenizers", "huggingface_hub",
             # SAP GUI scripting e fechamento de Excel exportado pelo SAP.
             "win32com.client", "win32gui", "win32con",
             "pythoncom", "pywintypes",
@@ -825,6 +823,7 @@ if _want('cadastro'):
             "snowflake.connector",
         ] + WEBVIEW_HIDDEN + CADASTRO_INTERNAL_HIDDEN + CADASTRO_EXTRA_HIDDEN,
         excludes=[
+            "torch", "sentence_transformers", "transformers", "optimum",
             "PyQt5", "PyQt6", "PySide6",
             "matplotlib.backends.backend_tkagg",
             "matplotlib.backends.backend_gtk3agg",

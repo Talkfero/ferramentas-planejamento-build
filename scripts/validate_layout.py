@@ -39,6 +39,7 @@ REQUIRED = {
     "cadastro": [
         "apps/cadastro_viabilidades/main_web/main_web.py",
         "apps/cadastro_viabilidades/main_web/mw_sap.py",
+        "apps/cadastro_viabilidades/main_web/mw_semantic.py",
         "apps/cadastro_viabilidades/main_web/index.html",
         "apps/cadastro_viabilidades/main_web/requirements-web.txt",
         "apps/cadastro_viabilidades/Sistema_Cadastro.ico",
@@ -63,7 +64,9 @@ REQUIRED_TEXT = {
             "pybcj",
             "pycryptodomex",
             "pywin32",
-            "sentence-transformers",
+            "onnxruntime",
+            "tokenizers",
+            "huggingface-hub",
         ],
     },
 }
