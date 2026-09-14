@@ -4,6 +4,8 @@
 # Sistema de Cadastro (SAP GUI, PDF/7z e e-mails .msg).
 # Atualizado em 2026-07-17 para o fallback semantico local do Cadastro
 # (Sentence Transformers + modelo ONNX quantizado).
+# Atualizado em 2026-09-10: inferencia ONNX direta no Cadastro; retirados
+# Torch, Sentence Transformers, Transformers e ferramentas de exportacao.
 # Atualizado em 2026-07-22 para o Snowflake (Reserva Tecnica + aba
 # Consulta do Cadastro), que sucedeu o Oracle desligado.
 #
@@ -67,11 +69,8 @@ networkx==3.6.1
 numpy==2.4.6
 olefile==0.47
 oletools==0.60.2
-onnx==1.22.0
 onnxruntime==1.27.0
 openpyxl==3.1.5
-optimum==2.1.0
-optimum-onnx==0.1.0
 packaging==26.2
 pandas==3.0.3
 pcodedmp==1.2.6
@@ -116,7 +115,6 @@ s3transfer==0.19.2
 safetensors==0.8.0
 scikit-learn==1.9.0
 scipy==1.18.0
-sentence-transformers==5.6.0
 setuptools==82.0.1
 shellingham==1.5.4
 shiboken6==6.11.1
@@ -129,9 +127,7 @@ texttable==1.7.0
 threadpoolctl==3.6.0
 tokenizers==0.22.2
 tomlkit==0.15.1
-torch==2.13.0
 tqdm==4.68.4
-transformers==4.57.6
 typer==0.27.0
 typing_extensions==4.15.0
 tzdata==2026.2
