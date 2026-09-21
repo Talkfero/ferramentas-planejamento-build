@@ -26,3 +26,35 @@ Usuário autorizou commit/push/merge do trabalho pendente. Contrato de arquivos
 e requirements do Cadastro e sintaxe do spec revalidados contra a origem.
 Commit inclui somente fonte e documentação; instalador preexistente continua
 fora do Git. Integração remota na sessão cf559c. Nenhum build será disparado.
+
+## Requirements e sincronizacao — 21/09/2026
+
+Branch `main`, HEAD `1a26c90` no inicio da sessao, arvore limpa fora do
+instalador `publish/FerramentasCompartilhadas-Setup-1.3.4.exe`, que continua
+nao rastreado. `fetch` feito: `main` igual a `origin/main`. O HEAD `8b6618a`
+citado no inventario de 09/09 esta superado por este registro.
+
+Conferencia de requirements (script proprio, somente leitura): o lock foi
+comparado com os requirements de origem de cada app que `build_all_shared.bat`
+instala — launcher, diagnostico, coplan (web + build), cadastro, elexplan,
+unificador e imagedx. Antes: dois pacotes ficavam fora da trava.
+
+- `playwright` — entra pelo `requirements.txt` do Elexplan e pelo
+  `_collect_all_required("playwright")` do PIM em `multi_apps.spec`.
+- `pyqtgraph` — entra pelo frontend Qt legado do Elexplan.
+
+Ambos eram instalados sem `PIP_CONSTRAINT` efetivo, ou seja, o build pegava a
+versao mais nova do dia. Pinados em `playwright==1.60.0` e `pyqtgraph==0.14.0`,
+versoes do ambiente local — o mesmo ambiente bate exatamente com 81 dos 83
+pacotes do lock que tem instalados, o que sustenta a escolha. Apos a mudanca,
+os oito conjuntos de requirements sao satisfeitos pelo lock, sem pendencia.
+**As duas pinagens nao passaram por build**: confirmar no proximo build pedido.
+
+`scripts/validate_layout.py` local acusa `mw_semantic.py` e os tres pacotes
+ONNX ausentes, mas isso e' o clone descartavel em `apps/cadastro_viabilidades`,
+anterior a troca para ONNX. A origem satisfaz o contrato: `main_web/mw_semantic.py`
+e' rastreado no Cadastro e o `requirements-web.txt` de la tem onnxruntime,
+tokenizers e huggingface-hub. Em CI o `prepare_apps.ps1` reclona antes de validar.
+
+Sem build e sem publicacao. Instalador 1.3.4 segue como ultimo artefato local;
+o proximo tem de superar essa versao.
