@@ -169,6 +169,16 @@ try {
   & $VenvPy "$PSScriptRoot\validate_layout.py" --apps $Apps
   if ($LASTEXITCODE -ne 0) { throw "Layout incompleto (validate_layout)." }
 
+  # Import novo que nao entrou no requirements nao e' instalado aqui e so
+  # quebra no bundle, na maquina do usuario. Roda contra os repos de ORIGEM
+  # (irmaos), nao contra apps/, porque e' la que o requirements se corrige.
+  # Regra do usuario de 22/09/2026; ver docs/PUBLICAR.md.
+  Write-Step "2b/6  Conferindo requirements dos repos de origem"
+  & $VenvPy "$PSScriptRoot\check_requirements.py"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Import sem declaracao no requirements. Corrija antes de buildar."
+  }
+
   # --- 3) deps + PyInstaller ------------------------------------------------
   Write-Step "3/6  Instalando deps + rodando PyInstaller (build_all_shared.bat $Apps)"
   $env:APPS_TO_BUILD = $Apps
