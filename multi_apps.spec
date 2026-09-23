@@ -396,7 +396,6 @@ CADASTRO_INTERNAL_HIDDEN = [
     "mw_backup",
     "mw_base",
     "mw_config",
-    "mw_secret",
     "mw_db",
     "mw_despacho",
     "mw_email",
@@ -647,7 +646,10 @@ if _want('elexplan'):
         datas=_elexplan_web_datas() + PIM_EXTRA_DATAS + WEBVIEW_DATAS,
         runtime_hooks=RUNTIME_HOOKS_WEB,
         hiddenimports=(
-            ["webview"]
+            # [RB-PYTZ] ver nota nos outros apps: pandas 3.x importa pytz de
+            # forma lazy e o PyInstaller nao o coleta, mas o hook do pytz cria
+            # `_internal/pytz/` sem `__init__.py`, que sombreia o modulo.
+            ["webview", "pytz"]
             + _collect_submodules_safe("pim_backend", extra_paths=[ELEXPLAN_DIR])
             # A UI web importa os modulos de elexplan.webui/backend de forma
             # indireta (registro de abas, jobs); blinda contra o que a analise
@@ -676,6 +678,16 @@ if _want('diag'):
         hiddenimports=[
             "secrets",
             "pandas",
+            # [RB-PYTZ] O pandas 3.x importa pytz por
+            # `import_optional_dependency`, que e' lazy: a analise estatica do
+            # PyInstaller NAO o enxerga, entao o modulo nao entra no PYZ. Mas o
+            # hook oficial do pytz coleta o zoneinfo mesmo assim, criando
+            # `_internal/pytz/` SEM `__init__.py` — uma namespace package que
+            # SOMBREIA o modulo ausente. O import passa, o objeto vem vazio, e
+            # `pandas.compat._optional.get_version` estoura com
+            # "Can't determine version for pytz" logo no `import pandas`.
+            # Achado em 22/09/2026: derrubava Elexplan, Diagnostico e Coplan.
+            "pytz",
             "pandas.io.formats.excel",
             "xlsxwriter",
             "openpyxl",
@@ -719,6 +731,16 @@ if _want('coplan_web'):
             "webview",
             "main_web",
             "pandas", "openpyxl", "sqlite3", "secrets",
+            # [RB-PYTZ] O pandas 3.x importa pytz por
+            # `import_optional_dependency`, que e' lazy: a analise estatica do
+            # PyInstaller NAO o enxerga, entao o modulo nao entra no PYZ. Mas o
+            # hook oficial do pytz coleta o zoneinfo mesmo assim, criando
+            # `_internal/pytz/` SEM `__init__.py` — uma namespace package que
+            # SOMBREIA o modulo ausente. O import passa, o objeto vem vazio, e
+            # `pandas.compat._optional.get_version` estoura com
+            # "Can't determine version for pytz" logo no `import pandas`.
+            # Achado em 22/09/2026: derrubava Elexplan, Diagnostico e Coplan.
+            "pytz",
             # Motor CAPEX embarcado (Gerenciador de Cenarios) + Build-up.
             # CapexMixin importa capex_engine de forma lazy (dentro de metodos);
             # buildup_pptx faz lazy-import de matplotlib/pptx ao exportar.

@@ -180,6 +180,22 @@ try {
   }
 
   # --- 3) deps + PyInstaller ------------------------------------------------
+  # [RB-LONGPATH] Em 22/09/2026 o build morreu no COLLECT com WinError 3: o
+  # dist/ anterior guardava restos de Torch, cujas pastas de licenca sao
+  # profundas, e somadas ao prefixo do OneDrive estouram os 260 caracteres do
+  # Windows. O proprio rmtree do PyInstaller nao conseguia limpar. Robocopy
+  # espelhando uma pasta vazia aguenta caminho longo.
+  $distDir = Join-Path $Root 'dist\FerramentasCompartilhadas'
+  if (Test-Path -LiteralPath $distDir) {
+    Write-Host '[limpeza] removendo dist anterior (caminho longo)...'
+    $vazio = Join-Path $env:TEMP ('fplan_vazio_' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $vazio | Out-Null
+    robocopy $vazio $distDir /MIR /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
+    Remove-Item -LiteralPath $distDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $vazio -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $distDir) { throw 'Nao consegui limpar dist/ anterior.' }
+  }
+
   Write-Step "3/6  Instalando deps + rodando PyInstaller (build_all_shared.bat $Apps)"
   $env:APPS_TO_BUILD = $Apps
   & "$Root\build_all_shared.bat" $Apps

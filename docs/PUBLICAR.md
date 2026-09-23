@@ -58,6 +58,33 @@ verde no GitHub **não** prova que o arquivo foi publicado na rede.
 `apps/cadastro_viabilidades` — é o clone descartável velho, não o contrato.
 O build reclona antes de validar; conferir a origem antes de tratar como erro.
 
+### Quando o build falha no `COLLECT` com WinError 3
+
+Sintoma: os executáveis são todos gerados, e o build morre no último passo,
+ao limpar `dist/`, com `FileNotFoundError: [WinError 3]` num caminho que
+existe. Aconteceu em 22/09/2026.
+
+Causa: **limite de 260 caracteres do Windows**. O repositório mora sob
+`OneDrive - GRUPO EQUATORIAL ENERGIA\Documentos\Arquivos\Codigos\`, um
+prefixo longo, e o `dist/` anterior guardava `torch-2.13.0.dist-info` — resto
+de antes da migração para ONNX. O Torch traz licenças em pastas muito
+aninhadas (`.../kineto/libkineto/third_party/dynolog/third_party/DCGM/...`),
+e somado ao prefixo o `shutil.rmtree` do PyInstaller não consegue nem caminhar
+na árvore. `WinError 3` num caminho que existe é a assinatura disso.
+
+Correção: apagar `dist/FerramentasCompartilhadas` com método que aguenta
+caminho longo, porque `Remove-Item` comum falha igual:
+
+```
+robocopy <pasta vazia> <dist\FerramentasCompartilhadas> /MIR
+Remove-Item -LiteralPath <dist\FerramentasCompartilhadas> -Recurse -Force
+```
+
+`dist/` é saída de build e está no `.gitignore`: apagar é seguro e é o que o
+próprio PyInstaller tentava fazer. **Não confundir com interrupção:** a
+primeira tentativa desse dia foi atribuída a processo morto e era o mesmo
+WinError 3 — só faltava o log inteiro para ver.
+
 ## Parte 3 — Publicação na rede (só no gatilho com "publicar")
 
 Nesta ordem, sem pular etapa:
