@@ -99,8 +99,35 @@ Nesta ordem, sem pular etapa:
    `sistemadecadastro`, `elexplan` — cada uma com `version`, `url`, `sha256`,
    `notes` e `min_version`. As três apontam para o **mesmo** instalador, com o
    mesmo `sha256`: o pacote é um só.
-5. **Reler o JSON da rede** e conferir que voltou o conteúdo esperado. Escrever
-   não é publicar; publicado é o que se lê de volta.
+5. **Validar o JSON com as regras do próprio app, ANTES de copiar para a rede:**
+
+   ```
+   python scripts/check_latest_json.py <o json novo>
+   ```
+
+   Ele importa `looks_like_fs_path` e `fs_path_from` do Cadastro — as funções
+   que decidem, em produção, se o download acontece — e confere url por url,
+   o SHA-256 do arquivo que a url **resolve**, e se `min_version` não ficou
+   maior que `version`. Sai 1 se algo estiver errado.
+
+6. **Reler o JSON da rede** e rodar o validador **de novo**, agora contra o
+   arquivo publicado. Escrever não é publicar; publicado é o que se lê de volta.
+
+### Por que o validador existe
+
+Em 23/09/2026 a publicação saiu com a url escrita com **uma** barra invertida
+inicial em vez de duas. Sem o prefixo UNC completo, `looks_like_fs_path`
+devolve `False` e o app recusa com `url_invalida`. Como `min_version` obriga a
+atualizar, o usuário ficou **bloqueado e sem conseguir atualizar**.
+
+A validação daquele dia passou porque conferia só o **nome** do arquivo
+(`PurePath(url).name`), descartando o caminho — ou seja, **não falharia com o
+defeito presente**. Nunca validar `latest.json` com verificação própria:
+usar as funções do app, que são a regra de verdade.
+
+**Nunca escrever a url à mão.** Partir da url que já funcionava (o backup) e
+trocar apenas o nome do instalador: escapar contrabarra em Python e em JSON ao
+mesmo tempo é onde o erro nasce.
 
 ### `min_version` trava o aplicativo
 
