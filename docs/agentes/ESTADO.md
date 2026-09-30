@@ -146,3 +146,53 @@ pendencia quando o usuario confirmar que o PIM abre no app instalado.
   mesclados, `WS-build-incremental-cache`), `fix/valida-playwright-elexplan` e
   `melhoria/leitura-pdf-sap-vetorial`. O destino delas nao foi revisado nesta
   consolidacao.
+
+## Build e publicacao da 1.3.8 — 30/09/2026
+
+Pedido do usuario: *"gerar instalador e publicar; tem que atualizar versao do
+elexplan que mexi"*. Sessao `2026-09-29-105926-claude-ferramentas-planejamento-build-cccb1e`.
+
+Origem conferida com `fetch` antes do build: launcher, Diagnostico, Coplan,
+Cadastro e Elexplan limpos e iguais ao `origin`. No Elexplan sobravam so
+`codigo1_web.py` (linha em branco no fim) e `interplan.py` (fim de linha),
+herdados e sem efeito. O build local copia a arvore de trabalho, entao isso
+foi conferido antes.
+
+- Elexplan `APP_VERSION` 1.2.1 -> **1.3.0**, MINOR pela regra do `updates.py`
+  (funcoes novas: comparacao PIM x rele e periodo do banco no Mercado).
+  `0ac040c` no Elexplan, `[skip ci]`.
+- Instalador -> **1.3.8** em `Setup_turbinado.iss`, `b288f46`, `[skip ci]`.
+
+Build local (`build_all_local.ps1 -Apps all`), 10:09 a 10:36, terminou em
+"BUILD ALL CONCLUIDO", exit 0, na primeira tentativa. Requirements e layout
+verdes; self-test do Coplan OK; self-test do Elexplan OK ("Playwright e driver
+disponiveis"); runtime pywebview OK em Elexplan, Coplan e Cadastro. Versoes nos
+clones: Coplan 1.3.3, Cadastro 1.2.3, Elexplan 1.3.0.
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.8 | 1.3.3 | 1.2.3 | 1.3.0 | 236.080.853 | `dee40652a835db79fa018dd54c55b15382c3915fff5b71c3558f1ad4fbb24b95` | `latest.json.bak-20260930-104218` |
+
+Publicacao, na ordem do `docs/PUBLICAR.md`: copia para a rede com o SHA-256 da
+copia igual ao local; backup; JSON montado a partir do backup trocando so o
+nome do instalador na url; comparado campo a campo com o backup (mudaram so
+url e sha256 nas tres secoes, e version, min_version e notes no Elexplan);
+`check_latest_json.py` com exit 0 antes de publicar e de novo contra o arquivo
+lido da rede. `min_version` do Elexplan = 1.3.0: **atualizacao obrigatoria**.
+Espaco na rede depois: ~0,9 GB.
+
+**Achados deste build:**
+
+- **Os seis EXEs saem com `FileVersion` 0.0.0.** O `multi_apps.spec` le
+  `APP_VERSION` do ambiente, que o workflow define e o `build_all_local.ps1`
+  nao. CompanyName, ProductName e FileDescription estao preenchidos, que e o
+  que resolveu o bloqueio do Defender em 04/08. **Nao e regressao:** a 1.3.7
+  instalada nesta maquina tambem tem os seis com 0.0.0, assim como todo build
+  local desde a 1.3.5. Correcao proposta: o script local exportar a versao do
+  `.iss` antes do PyInstaller.
+- A mensagem final do script diz "Instalador gerado: ...Setup-1.0.2.exe"; o
+  ISCC gerou o 1.3.8. O script escolhe o arquivo errado de `Output/` so para
+  imprimir. Nao afeta o artefato, mas engana quem le so o fim do log.
+
+Continuam valendo: nenhum app aberto em janela real; Diagnostico, Unificador,
+Cadastro e launcher nao sao executados no build.
