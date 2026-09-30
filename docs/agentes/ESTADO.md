@@ -196,3 +196,56 @@ Espaco na rede depois: ~0,9 GB.
 
 Continuam valendo: nenhum app aberto em janela real; Diagnostico, Unificador,
 Cadastro e launcher nao sao executados no build.
+
+## Republicacao da 1.3.8 com a mesma versao — 30/09/2026 (tarde)
+
+Pedido do usuario: *"fiz uma mexida no elexplan e quero novo instalador mas
+sem aplicar nova versao no elexplan; rebuilda e publica de novo a mesma
+versao"*. Sessao `2026-09-30-151510-claude-ferramentas-planejamento-build-ec08e2`.
+Excecao explicita a regra do `docs/PUBLICAR.md` de subir a versao do
+instalador: continua **1.3.8**, com Elexplan **1.3.0**.
+
+Entrou o Elexplan `112df01` (piso interno de 3% no IMPOSSIVEL do Mercado,
+`PISO_DO_IMPOSSIVEL = 0.03`, conferido no clone). Notas da tela de
+atualizacao **nao** mudaram: o usuario pediu que os 3% nao aparecam ("e' uma
+regra interna").
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.8 (rebuild) | 1.3.3 | 1.2.3 | 1.3.0 | 236.065.146 | `0f0e7b236fe456154f6a2998d6e1fd32b0d453c0e41fcba106206b98924f98ad` | `latest.json.bak-20260930-162423` |
+
+O 1.3.8 da manha (`dee40652…`) foi substituido na rede; copia local em
+`Output/FerramentasCompartilhadas-Setup-1.3.8-anterior-dee40652.exe`.
+
+Build: `APP_VERSION=1.3.8` definido no ambiente, como o workflow faz, e **os
+seis EXEs sairam com FileVersion 1.3.8** — confirma a correcao proposta em
+`WS-build-local-sem-versao-exe`, ainda nao incorporada ao script. Self-tests
+Coplan e Elexplan OK, pywebview OK nos tres.
+
+Tres tentativas, nenhuma por defeito de codigo:
+
+1. O venv `%TEMP%\fplan_build_venv`, criado em 22/09, teve arquivos apagados
+   as 12:39 por limpeza automatica de Temp (sumiram `pip/__main__.py` e
+   `pywin32_bootstrap`); o script so confere a minor do Python e morreu em
+   "Falha ao atualizar pip no venv". Refeito com `-RecreateVenv`.
+2. Com o venv novo, o pip 26.2.1 travou num `access violation` de conexao
+   (nao reproduziu em teste isolado); os dois processos do pip do proprio
+   build foram encerrados e o bat seguiu. A rodada foi morta pelo limite de
+   30 min das tarefas em segundo plano do agente, no ultimo EXE.
+3. Disparada com `Start-Process`, fora desse limite: 15:52-16:22, exit 0.
+
+Publicacao: instalador copiado como `.novo`, SHA da copia igual; backup;
+troca 16:24:24; JSON a partir do backup trocando so o `sha256`; validador exit
+0 antes; JSON publicado 16:24:33 (~9 s com sha antigo: o app recusaria o
+download, sem instalar arquivo errado); relido e validado de novo.
+
+**`min_version` do Elexplan.** De manha foi publicado 1.3.0; as 12:27 o
+usuario baixou para 1.2.0 na rede, sem backup, "pra ninguem alterar"
+enquanto a correcao nao saia. A republicacao preservou o 1.2.0. Pedido o
+retorno, a escrita pelo agente foi bloqueada pelo controle de permissoes; o
+**usuario editou as 17:05** e o relido da rede tem `min_version` 1.3.0,
+validador exit 0, diferenca para o backup so nos `sha256` e nesse campo.
+
+Quem ja tinha instalado o Elexplan 1.3.0 antes do rebuild **nao** recebe aviso
+(mesma versao); so pega a correcao reinstalando pelo instalador da rede.
+Rede: ~0,9 GB livres.
