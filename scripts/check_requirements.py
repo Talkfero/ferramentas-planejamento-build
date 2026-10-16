@@ -70,7 +70,6 @@ REPOS = {
     "elexplan": ["requirements.txt", "requirements-dev.txt"],
     "sistemadecadastro": ["main_web/requirements-web.txt",
                           "requirements-desktop.txt", "requirements-dev.txt"],
-    "diagnostico_atual": ["requirements.txt"],
     "Ferramenta_plan": ["requirements.txt", "requirements-dev.txt"],
     "extracaopim": ["requirements.txt"],
 }

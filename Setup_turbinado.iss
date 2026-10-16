@@ -6,7 +6,6 @@
 ;   ISCC Setup_turbinado.iss                         -> instalador completo
 ;   ISCC /DAPP_ONLY=launcher    Setup_turbinado.iss  -> apenas launcher
 ;   ISCC /DAPP_ONLY=elexplan    Setup_turbinado.iss  -> apenas elexplan
-;   ISCC /DAPP_ONLY=diag        Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=unif        Setup_turbinado.iss
 ;   ISCC /DAPP_ONLY=coplan_web  Setup_turbinado.iss   (pywebview; ja inclui Capex)
 ;   ISCC /DAPP_ONLY=status      Setup_turbinado.iss
@@ -24,6 +23,12 @@
 ;     feito no Coplan Web. Nao existe mais "ImageDx- Detalhamento.exe"; a
 ;     chave "imagedx" vira alias de "coplan_web" e o instalador remove o exe
 ;     e o atalho de quem ja tinha a suite instalada.
+;   * O Diagnostico de alimentadores foi APOSENTADO (16/10/2026): virou o
+;     modulo "Diagnostico da Rede" do Coplan Web (core/diagnostico). Nao
+;     existe mais "Diagnostico de alimentadores.exe"; a chave "diag" vira
+;     alias de "coplan_web" e o instalador remove o exe e o atalho. A
+;     automacao do Interplan, que so o avulso tinha, ficou de fora por
+;     decisao do usuario.
 ;
 ; Entrada esperada:
 ;   dist\FerramentasCompartilhadas\_internal\...  (compartilhado)
@@ -63,10 +68,20 @@
   #define APP_ONLY "coplan_web"
 #endif
 
+; Alias retrocompat: "diag" foi aposentado (16/10/2026). O diagnostico por
+; alimentador e o acompanhamento do plano sao o modulo "Diagnostico da Rede"
+; do Coplan Web (core/diagnostico). Redireciona pro coplan_web.
+#if APP_ONLY == "diag"
+  #undef APP_ONLY
+  #define APP_ONLY "coplan_web"
+#endif
+
 #define IncludeAll    (APP_ONLY == "all")
 #define WantLauncher  (IncludeAll || APP_ONLY == "launcher")
 #define WantElexplan  (IncludeAll || APP_ONLY == "elexplan")
-#define WantDiag      (IncludeAll || APP_ONLY == "diag")
+; Diagnostico aposentado (16/10/2026): vive no Coplan Web. Mantido como 0 para
+; compilar fora todos os blocos `#if WantDiag` antigos.
+#define WantDiag      (0)
 ; ImageDx aposentado (30/07/2026): o detalhamento vive no Coplan Web. Mantido
 ; como 0 para compilar fora todos os blocos `#if WantImageDx` antigos.
 #define WantImageDx   (0)
@@ -293,6 +308,12 @@ Type: files;          Name: "{app}\Status de medicao.exe"
 ; sobra um item quebrado no menu Iniciar de quem ja tinha a suite instalada.
 Type: files;          Name: "{app}\ImageDx- Detalhamento.exe"
 Type: files;          Name: "{group}\ImageDx - Detalhamento.lnk"
+; Remove o Diagnostico de alimentadores de instalacoes anteriores: aposentado
+; em 16/10/2026, virou o modulo "Diagnostico da Rede" do Coplan Web. Tira o
+; atalho junto (mesmo motivo do ImageDx). As preferencias do avulso em
+; %APPDATA%\DiagnosticoAlimentador ficam: o Coplan as copia na 1a abertura.
+Type: files;          Name: "{app}\Diagnostico de alimentadores.exe"
+Type: files;          Name: "{group}\Diagnostico de alimentadores.lnk"
 
 [Files]
 ; ------------------- NUCLEO -------------------
