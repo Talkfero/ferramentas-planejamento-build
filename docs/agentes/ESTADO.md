@@ -249,3 +249,66 @@ validador exit 0, diferenca para o backup so nos `sha256` e nesse campo.
 Quem ja tinha instalado o Elexplan 1.3.0 antes do rebuild **nao** recebe aviso
 (mesma versao); so pega a correcao reinstalando pelo instalador da rede.
 Rede: ~0,9 GB livres.
+
+## Build e publicacao da 1.3.9 — 15 e 16/10/2026
+
+Pedido do usuario (15/10): *"gerar novo build e publicar; fiz varias
+atualizacoes na maioria dos aplicativos, leve em consideracao"*. Sessao
+`2026-09-30-151510-claude-ferramentas-planejamento-build-ec08e2`.
+
+Origem (fetch): Diagnostico `41cf432`, Coplan `d4ea669`, Cadastro `19070af`,
+Elexplan `1cfd0b8`, launcher `b05c83d` sem mudanca. Nada removido ou
+renomeado nos apps; `core.diagnostico` do Coplan entra pelo
+`collect_submodules`, sem arquivos de dados; Diagnostico importa `roteiro` e
+`tela` estaticamente. Sem ajuste no spec.
+
+Versoes (semver de cada app, funcoes novas = MINOR), todas `[skip ci]`:
+
+| App | Antes | Agora | Commit |
+|---|---|---|---|
+| Coplan (Diagnostico da Rede como modulo) | 1.3.3 | 1.4.0 | `ade8b68` |
+| Cadastro (banco unico, demandas com codigo e cronometro) | 1.2.3 | 1.3.0 | `ae8976c` |
+| Elexplan (manobra/socorro, teto dinamico, laudo gravado) | 1.3.0 | 1.4.0 | `0fb1f2c` |
+| Instalador | 1.3.8 | 1.3.9 | `f697161` |
+
+`min_version` = `version` nos tres (inclui `CAD-banco-unico-rollout`:
+"atualizar todos juntos"). O commit do instalador so passou com
+`git -c windows.appendAtomically=false` (Git no OneDrive falhou no reflog).
+
+Build local 15/10 11:38-12:22 (43 min 45 s), com `-RecreateVenv` (a limpeza de
+Temp apagou ate o `pyvenv.cfg`) e `APP_VERSION=1.3.9`, disparado com
+`Start-Process`. Requirements e layout verdes; self-tests Coplan e Elexplan
+OK; pywebview OK nos tres; os seis EXEs com FileVersion 1.3.9; bibliotecas
+iguais ao lock.
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.9 | 1.4.0 | 1.3.0 | 1.4.0 | 236.734.627 | `a33ea74fd1e1c6e17627e5684d5c8e5a82a53e83355daa5c7d1235b38889975b` | `latest.json.bak-20261016-081237` |
+
+Publicado em 16/10 08:12:59: copia com SHA igual ao local; JSON a partir do
+backup (url so troca o nome do instalador; notas novas dos tres, sem o piso
+interno de 3% do Elexplan); diff campo a campo conferido; validador exit 0
+antes e contra o relido da rede. **Atualizacao obrigatoria nos tres.** Rede
+com ~575 MB livres depois (cerca de duas publicacoes).
+
+### Local x GitHub, medido em 15/10
+
+O usuario decidiu manter o build local e trocar para o GitHub se ele fosse
+mais rapido; a pedido dele o workflow foi disparado em paralelo (run
+`38755891771`, `apps=all`, mesmos commits):
+
+| Caminho | Tempo |
+|---|---|
+| GitHub | 14 min 39 s de build + 33 s de download do instalador |
+| Local, recriando o venv | 43 min 45 s (Inno Setup sozinho: 12 min) |
+| Local, venv pronto (30/09) | 27-30 min |
+
+**O GitHub e' mais rapido, mas o artefato dele nao e' equivalente: o workflow
+nao aplica o `requirements.lock.txt`.** So o `build_all_local.ps1` define
+`PIP_CONSTRAINT`. No GitHub entraram numpy 2.5.4, pandas 3.0.6, onnxruntime
+1.31.0, playwright 1.64.0, snowflake-connector 5.0.0 e tokenizers 0.23.3, contra
+2.4.6 / 3.0.3 / 1.27.0 / 1.60.0 / 4.7.1 / 0.22.2 do lock. Por isso a publicacao
+usou o build local. A release `latest` do GitHub ficou com o 1.3.9 do CI
+(SHA-256 `5f5d5b96…8ab2`, diferente do publicado na rede).
+Pendencia `WS-ci-sem-lock`: com o lock aplicado no workflow, o GitHub passa a
+ser o caminho mais rapido e equivalente.
