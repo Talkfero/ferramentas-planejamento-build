@@ -76,7 +76,6 @@ Write-Host "[overlay_bundle] apos overlay: $depois arquivo(s) (+$vindos vindos d
 $exesEsperados = @(
     "Ferramentas de Planejamento.exe",
     "Elexplan.exe",
-    "Diagnostico de alimentadores.exe",
     "Unificador de arquivos.exe",
     "Coplan Web.exe",
     "Sistema de Cadastro.exe"

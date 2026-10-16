@@ -63,10 +63,6 @@ APPS: List[AppDef] = [
            "Parâmetros elétricos + Status de Medição (chaves, status PIM, estatística)",
            "apps/elexplan/codigo1_elexplan.py",
            "apps/elexplan/Elexplan.ico"),
-    AppDef("diag", "Diagnóstico de alimentadores",
-           "Relatórios e diagnósticos da rede",
-           "apps/diagnostico/diagnostico.py",
-           "apps/diagnostico/diagnostico.ico"),
     AppDef("unif", "Unificador de arquivos",
            "Junta planilhas e CSVs",
            "apps/unificador/codigo4_unificador_de_arquivos.py",
@@ -90,7 +86,6 @@ APPS: List[AppDef] = [
 # =====================================================================
 APP_REQ_FILES = {
     "launcher":   "apps/launcher/requirements.txt",
-    "diag":       "apps/diagnostico/requirements.txt",
     "coplan_web": "apps/coplan/requirements-web.txt",
     "cadastro":   "apps/cadastro_viabilidades/main_web/requirements-web.txt",
     # unif tem requirements.txt PINADO (versoes ==) versionado aqui.

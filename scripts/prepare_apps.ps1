@@ -8,7 +8,9 @@ $ErrorActionPreference = "Stop"
 $repos = @(
   @{ Target = "launcher";              Url = "https://github.com/Talkfero/Ferramenta_plan.git" },
   @{ Target = "elexplan";              Url = "https://github.com/Talkfero/elexplan.git" },
-  @{ Target = "diagnostico";           Url = "https://github.com/Talkfero/diagnostico_atual.git" },
+  # Diagnostico de alimentadores aposentado (16/10/2026): virou o modulo
+  # "Diagnostico da Rede" do Coplan (coplanweb/core/diagnostico). O repo
+  # diagnostico_atual fica como historico e nao e' mais clonado.
   # Capex foi fundido dentro do Coplan (capex_engine vendorizado em coplanweb/);
   # nao ha mais repo/app/exe capex separado. Ver coplanweb/backend/domains/capex.py
   # (regra user 2026-06-18 "coplan vira a ferramenta unica").

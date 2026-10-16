@@ -11,7 +11,7 @@ rem   build_all_shared.bat launcher                -> apenas launcher
 rem   build_all_shared.bat launcher cadastro       -> subset
 rem
 rem Chaves validas:
-rem   launcher, elexplan, diag, unif, coplan_web, cadastro
+rem   launcher, elexplan, unif, coplan_web, cadastro
 rem
 rem coplan_web  = Coplan Web.exe   (pywebview; ja embarca o motor CAPEX)
 rem elexplan    = Elexplan.exe     (ja inclui o Status de Medicao: chaves/
@@ -22,6 +22,7 @@ rem Aliases retrocompat:
 rem   "coplan" -> "coplan_web"
 rem   "capex"  -> "coplan_web" (Ambiente Capex fundido no Coplan / capex_engine)
 rem   "status" -> "elexplan"   (Status de Medicao fundido no Elexplan)
+rem   "diag"   -> "coplan_web" (Diagnostico aposentado; modulo do Coplan)
 rem
 rem Dependencias: antes do PyInstaller, instala o requirements de cada
 rem app selecionado (apps web usam requirements-web.txt; apps sem arquivo
@@ -48,6 +49,8 @@ rem Capex fundido no Coplan: aceita "capex" como alias de coplan_web.
 if /I "!ARG!"=="capex" set "ARG=coplan_web"
 rem Status de Medicao fundido no Elexplan: aceita "status" como alias.
 if /I "!ARG!"=="status" set "ARG=elexplan"
+rem Diagnostico aposentado (16/10/2026): modulo do Coplan Web.
+if /I "!ARG!"=="diag" set "ARG=coplan_web"
 if defined APPS (
   set "APPS=!APPS!,!ARG!"
 ) else (
@@ -64,7 +67,7 @@ echo   %~nx0 all                    todos os apps
 echo   %~nx0 launcher               apenas launcher
 echo   %~nx0 launcher cadastro      subset (launcher + cadastro)
 echo.
-echo Chaves: launcher, elexplan, diag, unif, coplan_web, cadastro
+echo Chaves: launcher, elexplan, unif, coplan_web, cadastro
 echo.
 exit /b 0
 
@@ -76,13 +79,12 @@ echo =====================================================
 echo     0  Todos
 echo     1  Launcher (Ferramentas de Planejamento)
 echo     2  Elexplan           (ja inclui o Status de Medicao)
-echo     3  Diagnostico de alimentadores
-echo     4  Unificador de arquivos
-echo     5  Coplan Web         (pywebview, ja inclui o Capex)
-echo     6  Sistema de Cadastro (pywebview)
+echo     3  Unificador de arquivos
+echo     4  Coplan Web         (pywebview, ja inclui o Capex e o Diagnostico)
+echo     5  Sistema de Cadastro (pywebview)
 echo =====================================================
-echo  Dicas: pode combinar (ex. "1 3 7") ou digitar as chaves
-echo         (ex. "launcher diag cadastro coplan_web")
+echo  Dicas: pode combinar (ex. "1 4 5") ou digitar as chaves
+echo         (ex. "launcher cadastro coplan_web")
 echo.
 set /p "CHOICE=Escolha: "
 
@@ -94,14 +96,14 @@ for %%N in (!CHOICE!) do (
   if "%%N"=="0"        set "KEY=all"
   if "%%N"=="1"        set "KEY=launcher"
   if "%%N"=="2"        set "KEY=elexplan"
-  if "%%N"=="3"        set "KEY=diag"
-  if "%%N"=="4"        set "KEY=unif"
-  if "%%N"=="5"        set "KEY=coplan_web"
-  if "%%N"=="6"        set "KEY=cadastro"
+  if "%%N"=="3"        set "KEY=unif"
+  if "%%N"=="4"        set "KEY=coplan_web"
+  if "%%N"=="5"        set "KEY=cadastro"
   if /I "%%N"=="all"        set "KEY=all"
   if /I "%%N"=="launcher"   set "KEY=launcher"
   if /I "%%N"=="elexplan"   set "KEY=elexplan"
-  if /I "%%N"=="diag"       set "KEY=diag"
+  rem Alias: "diag" aposentado; o Diagnostico e modulo do Coplan Web
+  if /I "%%N"=="diag"       set "KEY=coplan_web"
   rem Alias: "imagedx" aposentado; detalhamento vive no Coplan Web
   if /I "%%N"=="imagedx"    set "KEY=coplan_web"
   if /I "%%N"=="unif"       set "KEY=unif"
@@ -155,7 +157,7 @@ if errorlevel 1 (
 
 rem Expande "all" para todas as chaves; senao usa a lista selecionada.
 set "DEP_KEYS=!APPS!"
-if /I "!APPS!"=="all" set "DEP_KEYS=launcher,elexplan,diag,unif,coplan_web,cadastro"
+if /I "!APPS!"=="all" set "DEP_KEYS=launcher,elexplan,unif,coplan_web,cadastro"
 
 set "DEP_FAIL="
 for %%K in (!DEP_KEYS!) do call :install_for %%K
@@ -231,7 +233,6 @@ set "REQ="
 set "REQ_EXTRA="
 set "PKGS="
 if /I "!K!"=="launcher"   set "REQ=apps\launcher\requirements.txt"
-if /I "!K!"=="diag"       set "REQ=apps\diagnostico\requirements.txt"
 if /I "!K!"=="coplan_web" (
   set "REQ=apps\coplan\requirements-web.txt"
   set "REQ_EXTRA=apps\coplan\scripts\build\requirements-build.txt"

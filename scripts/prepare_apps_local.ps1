@@ -23,7 +23,7 @@ $ErrorActionPreference = "Stop"
 $repos = @(
   @{ Target = "launcher";              Source = "Ferramenta_plan" },
   @{ Target = "elexplan";              Source = "elexplan" },
-  @{ Target = "diagnostico";           Source = "diagnostico_atual" },
+  # diagnostico_atual aposentado (16/10/2026): modulo do Coplan.
   @{ Target = "coplan";                Source = "coplanweb" },
   # status_medicao fundido no Elexplan: sem app/exe/repo proprio.
   @{ Target = "cadastro_viabilidades"; Source = "sistemadecadastro" }

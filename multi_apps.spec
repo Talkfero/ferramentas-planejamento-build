@@ -8,7 +8,7 @@ Parametrizavel via variavel de ambiente APPS_TO_BUILD:
   APPS_TO_BUILD=launcher,cadastro   -> subconjunto
 
 Chaves validas:
-  launcher, elexplan, diag, unif, coplan_web, cadastro
+  launcher, elexplan, unif, coplan_web, cadastro
 
 OBS: o antigo 'capex' (Ambiente Capex.exe) foi FUNDIDO dentro do Coplan
 (capex_engine vendorizado em coplanweb/) — virou feature do "Coplan Web.exe".
@@ -16,6 +16,9 @@ OBS: o antigo 'status' (Status de medicao.exe) foi FUNDIDO dentro do Elexplan
 (abas Chaves/Rebalanceamento + Status Medicoes + Analise Estatistica) — nao ha
 mais chave/exe/repo status separado (regra user 2026-06-18). 'status' e' aceito
 como alias de 'elexplan'.
+OBS: o antigo 'diag' (Diagnostico de alimentadores.exe) foi APOSENTADO em
+16/10/2026: virou o modulo "Diagnostico da Rede" do Coplan Web
+(core/diagnostico). 'diag' e' aceito como alias de 'coplan_web'.
 
 Saida:
   dist/FerramentasCompartilhadas/
@@ -34,7 +37,7 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 # Selecao de apps
 # =====================================================================
 VALID_KEYS = {
-    'launcher', 'elexplan', 'diag',
+    'launcher', 'elexplan',
     'unif', 'coplan_web', 'cadastro',
 }
 
@@ -61,6 +64,11 @@ else:
         if 'status' in tokens:
             tokens.discard('status')
             tokens.add('elexplan')
+        # Alias retrocompat: 'diag' (Diagnostico de alimentadores) foi
+        # aposentado; o diagnostico e' modulo do Coplan Web.
+        if 'diag' in tokens:
+            tokens.discard('diag')
+            tokens.add('coplan_web')
         invalid = tokens - VALID_KEYS
         if invalid:
             raise SystemExit(
@@ -119,7 +127,6 @@ ELEXPLAN_DIR   = os.path.join(APPS_DIR, "elexplan")
 # o job "build-web" de .github/workflows/build-exe.yml do repo do Elexplan.
 ELEXPLAN_ENTRY = os.path.join(ELEXPLAN_DIR, "codigo1_web.py")
 ELEXPLAN_STATIC_DIR = os.path.join(ELEXPLAN_DIR, "elexplan", "webui", "static")
-DIAG_DIR       = os.path.join(APPS_DIR, "diagnostico")
 UNIF_DIR       = os.path.join(APPS_DIR, "unificador")
 COPLAN_DIR     = os.path.join(APPS_DIR, "coplan")
 COPLAN_FRONTEND_DIR = os.path.join(COPLAN_DIR, "frontend")
@@ -164,10 +171,6 @@ APP_REQUIRED_FILES = {
         os.path.join(ELEXPLAN_DIR, "codigo1_web.py"),
         os.path.join(ELEXPLAN_DIR, "elexplan", "webui", "static", "index.html"),
         os.path.join(ELEXPLAN_DIR, "Elexplan.ico"),
-    ],
-    "diag": [
-        os.path.join(DIAG_DIR, "diagnostico.py"),
-        os.path.join(DIAG_DIR, "diagnostico.ico"),
     ],
     "unif": [
         os.path.join(UNIF_DIR, "codigo4_unificador_de_arquivos.py"),
@@ -667,38 +670,6 @@ if _want('elexplan'):
     _exes.append(_mk_exe(a, "Elexplan",
                          os.path.join(ELEXPLAN_DIR, "Elexplan.ico")))
 
-if _want('diag'):
-    # Entry point renomeado: era codigo2_diagnostico_atual.py, agora
-    # diagnostico.py. Nome do exe preservado ("Diagnostico de
-    # alimentadores") para nao quebrar atalhos/uninstaller existentes.
-    a = Analysis(
-        [os.path.join(DIAG_DIR, "diagnostico.py")],
-        pathex=[ROOT, DIAG_DIR],
-        datas=[],
-        hiddenimports=[
-            "secrets",
-            "pandas",
-            # [RB-PYTZ] O pandas 3.x importa pytz por
-            # `import_optional_dependency`, que e' lazy: a analise estatica do
-            # PyInstaller NAO o enxerga, entao o modulo nao entra no PYZ. Mas o
-            # hook oficial do pytz coleta o zoneinfo mesmo assim, criando
-            # `_internal/pytz/` SEM `__init__.py` — uma namespace package que
-            # SOMBREIA o modulo ausente. O import passa, o objeto vem vazio, e
-            # `pandas.compat._optional.get_version` estoura com
-            # "Can't determine version for pytz" logo no `import pandas`.
-            # Achado em 22/09/2026: derrubava Elexplan, Diagnostico e Coplan.
-            "pytz",
-            "pandas.io.formats.excel",
-            "xlsxwriter",
-            "openpyxl",
-        ],
-        excludes=COMMON_EXCLUDES,
-        cipher=block_cipher,
-    )
-    _analyses.append(a)
-    _exes.append(_mk_exe(a, "Diagnostico de alimentadores",
-                         os.path.join(DIAG_DIR, "diagnostico.ico")))
-
 if _want('unif'):
     a = Analysis(
         [os.path.join(UNIF_DIR, "codigo4_unificador_de_arquivos.py")],
@@ -731,6 +702,10 @@ if _want('coplan_web'):
             "webview",
             "main_web",
             "pandas", "openpyxl", "sqlite3", "secrets",
+            # Excel do modulo Diagnostico (core/diagnostico/exports.py). Ate
+            # 16/10/2026 so' o bloco do Diagnostico avulso os declarava; o
+            # _internal e' compartilhado, entao o Coplan os recebia de carona.
+            "xlsxwriter", "pandas.io.formats.excel",
             # [RB-PYTZ] O pandas 3.x importa pytz por
             # `import_optional_dependency`, que e' lazy: a analise estatica do
             # PyInstaller NAO o enxerga, entao o modulo nao entra no PYZ. Mas o

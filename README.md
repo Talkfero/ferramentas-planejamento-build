@@ -1,12 +1,12 @@
 # Ferramentas de Planejamento - build completo
 
-Empacotador Windows para os 6 aplicativos:
+Empacotador Windows para os 5 aplicativos:
 
 - Ferramentas de Planejamento / launcher
 - Elexplan (ja inclui o **Status de Medicao**: chaves/rebalanceamento, status PIM e estatistica)
-- Diagnostico de alimentadores
 - Unificador de arquivos
-- Coplan Web (ja inclui o **Ambiente Capex** embarcado — `capex_engine`)
+- Coplan Web (ja inclui o **Ambiente Capex** embarcado — `capex_engine` — e o
+  **Diagnostico da Rede**, `core/diagnostico`)
 - Sistema de Cadastro
 
 > **Capex fundido no Coplan (2026-06-18):** o antigo app *Ambiente Capex* deixou
@@ -34,6 +34,20 @@ Empacotador Windows para os 6 aplicativos:
 > a chave nas listas de `multi_apps.spec` / `build_gui.py` /
 > `build_all_shared.bat` / `scripts/validate_layout.py` e o `WantImageDx` do
 > `Setup_turbinado.iss`.
+
+> **Diagnostico de alimentadores aposentado (2026-10-16):** o app avulso deixou
+> de ter exe e componente proprios. O diagnostico por alimentador, o
+> comparativo anual e o status do plano sao o modulo **Diagnostico da Rede** do
+> **Coplan Web** (`coplanweb/core/diagnostico/`, programa em
+> `coplanweb/docs/MIGRACAO_DIAGNOSTICO.md`). A chave `diag` continua aceita como
+> alias de `coplan_web`, e o instalador remove o `Diagnostico de
+> alimentadores.exe` e o atalho de quem ja tinha a suite instalada. A automacao
+> do Interplan (importar, gerar CSVs, balancear), que so o avulso tinha, ficou
+> de fora por decisao do usuario.
+>
+> O repo `diagnostico_atual` fica como historico e nao e mais clonado. Para
+> voltar atras, desfazer o commit que aposenta o Diagnostico da suite (mesmo
+> formato do ImageDx: listas de build e o `WantDiag` do instalador).
 
 O instalador usa Inno Setup com `PrivilegesRequired=lowest` e instala em
 `{localappdata}\Programs\Ferramentas de Planejamento`, portanto nao exige
@@ -71,7 +85,7 @@ O workflow tem dois inputs, e eles respondem perguntas diferentes.
 
 - `all`: instalador completo.
 - `coplan_web`, `cadastro` etc.: instalador parcial de um app.
-  (`capex` resolve para `coplan_web`; `status` resolve para `elexplan`.)
+  (`capex` e `diag` resolvem para `coplan_web`; `status` resolve para `elexplan`.)
 
 **`rebuild_only` — o que RECOMPILAR** (vazio = tudo):
 
@@ -89,7 +103,7 @@ completo", use `apps=all` + `rebuild_only=coplan_web`.
 O bundle e' compartilhado: `dist\FerramentasCompartilhadas\` tem **um** unico
 `_internal\`, montado pelo `COLLECT` do fim do `multi_apps.spec`, somando as
 `binaries`/`datas` de todos os apps compilados. `pandas` e `numpy` servem
-Coplan, Cadastro e Diagnostico e aparecem **uma vez** — a deduplicacao acontece
+Coplan, Cadastro e Elexplan e aparecem **uma vez** — a deduplicacao acontece
 ai, no PyInstaller. O Inno **nao une nada**: ele so' empacota
 `dist\FerramentasCompartilhadas\_internal\*` como esta, e nao tem como enxergar
 um build anterior.
@@ -170,7 +184,8 @@ pagina de Releases sempre tem apenas o ultimo build.
 
 O workflow monta `apps/` a partir dos repos ativos no GitHub e usa o app local
 versionado aqui (`unificador`). A pasta `apps/imagedx/` continua versionada como
-historico do app aposentado, mas nao entra em nenhum build.
+historico do app aposentado, mas nao entra em nenhum build. O Diagnostico
+(`diagnostico_atual`) tambem saiu da lista de repos clonados.
 
 > **Elexplan e a UI web (2026-07-31):** o Elexplan migrou para **pywebview**
 > (`codigo1_web.py` -> `elexplan.webui`) e o frontend Qt foi **aposentado, nao

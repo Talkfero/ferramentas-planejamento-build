@@ -19,10 +19,6 @@ REQUIRED = {
         "apps/elexplan/elexplan/webui/app.py",
         "apps/elexplan/Elexplan.ico",
     ],
-    "diag": [
-        "apps/diagnostico/diagnostico.py",
-        "apps/diagnostico/diagnostico.ico",
-    ],
     "unif": [
         "apps/unificador/codigo4_unificador_de_arquivos.py",
         "apps/unificador/Unificador.ico",
@@ -85,6 +81,9 @@ def selected(raw: str) -> list[str]:
         elif key == "status":
             # Status de Medicao foi fundido no Elexplan.
             key = "elexplan"
+        elif key == "diag":
+            # Diagnostico aposentado (16/10/2026): modulo do Coplan Web.
+            key = "coplan_web"
         if key:
             keys.append(key)
     invalid = sorted(set(keys) - set(REQUIRED))
