@@ -312,3 +312,16 @@ usou o build local. A release `latest` do GitHub ficou com o 1.3.9 do CI
 (SHA-256 `5f5d5b96…8ab2`, diferente do publicado na rede).
 Pendencia `WS-ci-sem-lock`: com o lock aplicado no workflow, o GitHub passa a
 ser o caminho mais rapido e equivalente.
+
+**Publicacao da 1.3.9 recolhida em 16/10 08:18:43.** Depois de perguntar se
+o Diagnostico avulso tinha saido do instalador (nao saiu: a Fase 6 do
+`coplanweb/docs/MIGRACAO_DIAGNOSTICO.md` depende do usuario e a automacao do
+Interplan, Fase 4, so existe no avulso), o usuario pediu: *"vamos ter que
+republicar na mesma versao; primeiro vou corrigir; volte o latest agora para
+ninguem atualizar rapido"*. O `latest.json` voltou ao backup
+`latest.json.bak-20261016-081237` (1.3.8, `0f0e7b23`), validador exit 0; o
+JSON da 1.3.9 ficou em `latest.json.bak-20261016-081843-v139`. O instalador
+1.3.9 continua na pasta, sem ninguem apontando para ele. A 1.3.9 ficou
+oferecida por ~6 min (08:12:59-08:18:43): quem atualizou nessa janela fica na
+1.3.9 sem aviso (versao instalada maior que a publicada) e, numa republicacao
+com as mesmas versoes, nao recebera aviso da correcao.
