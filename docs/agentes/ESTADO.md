@@ -325,3 +325,54 @@ JSON da 1.3.9 ficou em `latest.json.bak-20261016-081843-v139`. O instalador
 oferecida por ~6 min (08:12:59-08:18:43): quem atualizou nessa janela fica na
 1.3.9 sem aviso (versao instalada maior que a publicada) e, numa republicacao
 com as mesmas versoes, nao recebera aviso da correcao.
+
+## Republicacao da 1.3.9 pelo GitHub — 19/10/2026
+
+Pedido do usuario: *"ja atualizei o que tinha pra atualizar e ajustar; gerar
+e publicar a 1.3.9 novamente"*; depois, *"entao faca os ajustes necessarios
+para o github"*. Mesmas versoes: instalador 1.3.9, Coplan 1.4.0, Cadastro
+1.3.0, Elexplan 1.4.0.
+
+Entrou desde o recolhimento: Diagnostico avulso aposentado da suite (`9bceae3`,
+merge `6955a26`: WantDiag=0, `[InstallDelete]` do exe e do atalho; o launcher
+descobre os exes pela pasta e nao precisou mudar); Coplan `782f35a` (sem a
+automacao do Interplan, banco "nao localizado", filtros em cascata); Cadastro
+`6a47f60` (Mapa Termico por parametro, Snowflake por estado); Elexplan
+`55b9d80` (teto automatico, demanda vazia com motivo, rebalanceamento minimo e
+conjunto, Interplan do laudo gravado).
+
+**Correcao do workflow (`ec52fb8`):** `PIP_CONSTRAINT` apontando para o
+`requirements.lock.txt` no passo do `build_all_shared.bat`; novo
+`scripts/check_bundle_lock.py` (passo "Conferir bibliotecas do bundle contra o
+lock"), que le os `.dist-info` do bundle e falha se algum diverge do lock —
+conferido com exit 1 nos nomes do bundle de 15/10 (13 divergentes) e exit 0
+no bundle local; cache do bundle base `bundle-v1` -> `bundle-v2`. Limite: so
+ve os ~21 pacotes cujos metadados o PyInstaller copia.
+
+Dois builds em paralelo, mesmos commits:
+
+| Caminho | Tempo | Lock | Instalador |
+|---|---|---|---|
+| GitHub, run `39250136183` | 10 min 48 s + ~35 s de download | 21/21 | 228.722.176 bytes, `73bae1a6…` |
+| Local, venv pronto, `APP_VERSION=1.3.9` | 20 min 32 s (09:02:51-09:23:23) | 21/21 | `Output/...-1.3.9.exe` |
+
+Comparacao arquivo a arquivo: nada so no local; o GitHub tem 48 DLLs de
+runtime a mais (UCRT, `mfc140u`, `libcrypto`/`libssl` do Python do runner);
+11 textos diferem so no fim de linha. Self-tests Coplan e Elexplan e
+pywebview OK nos dois; cinco EXEs, sem o Diagnostico.
+
+**Publicado o artefato do GitHub** (decisao `WS-20261015-build-local-ou-ci`):
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.9 (GitHub) | 1.4.0 | 1.3.0 | 1.4.0 | 228.722.176 | `73bae1a6cc882fd620150a4f40850d7aa76fece0a96aa2950c9fefb0bd4e203f` | `latest.json.bak-20261019-092820` |
+
+O 1.3.9 de 15/10 (`a33ea74f`, sem referencia desde o recolhimento) foi
+substituido na rede as 09:27:50; copia local em
+`Output/FerramentasCompartilhadas-Setup-1.3.9-anterior-a33ea74f.exe`. JSON
+montado do backup (url so troca o nome; notas novas, incluindo a saida do
+Diagnostico avulso e que a automacao do Interplan nao veio para o Coplan);
+validador exit 0 antes; publicado 09:28:34; relido e validado de novo.
+**Atualizacao obrigatoria nos tres.** Rede: ~537 MB livres.
+
+`docs/PUBLICAR.md` passa a ter o GitHub como caminho padrao da Parte 2.

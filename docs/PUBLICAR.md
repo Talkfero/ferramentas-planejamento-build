@@ -33,9 +33,37 @@ nem "aproveitar" um instalador já gerado: publicar é sempre pedido explícito.
 
 ## Parte 2 — Build
 
+**Caminho padrão: o workflow do GitHub** (decisão do usuário
+`WS-20261015-build-local-ou-ci`: publicar pelo caminho mais rápido, desde que
+os dois gerem o mesmo pacote). Medido em 19/10/2026: GitHub 10 min 48 s + ~35 s
+de download; local 20 min 32 s com o venv pronto e 44 min recriando o venv.
+
+1. Commits de versão já no `main` de cada repo (o workflow clona o `main`).
+2. `gh workflow run build-installer.yml --ref main -f apps=all -f rebuild_only=""`
+   (dispara a release rolling `latest`, que é substituída — efeito externo).
+3. No log, conferir `[versao] APP_VERSION=<versão>`, os self-tests e
+   `[check_bundle_lock] bundle igual ao lock.`. O passo
+   "Conferir bibliotecas do bundle contra o lock" derruba o build se algum
+   pacote sair fora do `requirements.lock.txt` — até 15/10/2026 o workflow
+   não aplicava o lock e o bundle saía com versões não validadas.
+4. `gh release download latest --pattern "*Setup-<versão>.exe"` e conferir a
+   versão do arquivo (`VersionInfo`) antes da Parte 3.
+
+O pacote do GitHub tem, a mais que o local, só DLLs de runtime do Windows do
+Python do runner (UCRT, `mfc140u`, `libcrypto`/`libssl`); texto difere só no
+fim de linha. Conferido arquivo a arquivo em 19/10/2026.
+
+**Build local** (quando o GitHub não estiver disponível):
+
 ```
 powershell -ExecutionPolicy Bypass -File scripts\build_all_local.ps1 -Apps all
 ```
+
+Definir antes `$env:APP_VERSION = "<versão>"` (senão os EXEs saem com
+`FileVersion` 0.0.0, `WS-build-local-sem-versao-exe`). O venv fica em
+`%TEMP%\fplan_build_venv` e a limpeza de Temp o corrompe em uma ou duas
+semanas: se falhar em "Falha ao atualizar pip no venv", rodar com
+`-RecreateVenv`. Build com venv novo passa de 30 min.
 
 Roda na raiz de `ferramentas-planejamento-build`. Espelha o CI e faz tudo
 offline: monta `apps/` a partir dos repos irmãos, valida o layout, instala as
