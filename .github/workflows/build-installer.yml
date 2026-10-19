@@ -123,7 +123,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.BUNDLE_DIR }}
-          key: bundle-v1-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
+          key: bundle-v2-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
 
       - name: Confirmar modo (cache miss volta para build completo)
         id: final_mode
@@ -182,6 +182,12 @@ jobs:
           # recompilados; pacote faltando tem de derrubar o build, nao virar
           # aviso no log. Ver o cabecalho de STRICT_COLLECT em multi_apps.spec.
           STRICT_COLLECT: ${{ steps.final_mode.outputs.mode == 'incremental' && '1' || '' }}
+          # Trava de versoes: todo `pip install` do build_all_shared.bat respeita
+          # o lock, como no build_all_local.ps1. Ate 15/10/2026 o workflow nao
+          # tinha isto e o bundle saiu com numpy, onnxruntime, playwright e
+          # snowflake-connector mais novos que os validados. O caminho do
+          # runner nao tem espacos, entao o lock e' usado no lugar.
+          PIP_CONSTRAINT: ${{ github.workspace }}\requirements.lock.txt
         run: |
           call build_all_shared.bat %APPS_TO_BUILD%
 
@@ -205,6 +211,13 @@ jobs:
         run: |
           .\scripts\validate_runtime_bundle.ps1 -Apps all
 
+      # Confere o que FOI empacotado contra o lock (os self-tests so' importam
+      # Coplan e Elexplan e passaram com o bundle fora do lock em 15/10/2026).
+      - name: Conferir bibliotecas do bundle contra o lock
+        shell: pwsh
+        run: |
+          python scripts\check_bundle_lock.py "${{ env.BUNDLE_DIR }}"
+
       # So' o build FULL alimenta o cache. Um bundle incremental e' uma mistura
       # (app novo + base antigo); cachear isso empilharia deriva a cada rodada.
       # Assim o base e' sempre fruto de um build completo de verdade.
@@ -214,7 +227,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ${{ env.BUNDLE_DIR }}
-          key: bundle-v1-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
+          key: bundle-v2-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
 
       - name: Install Inno Setup
         shell: pwsh
