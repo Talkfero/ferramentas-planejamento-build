@@ -487,6 +487,8 @@ def _elexplan_web_datas():
       _internal/pim_config.json
       _internal/docs/CRITERIOS_DE_CALCULO.md
       _internal/docs/FORMATO_DE_ARQUIVOS.md
+      _internal/docs/PASSO_A_PASSO.md
+      _internal/docs/exemplos/**           (entrada/ e saida/ da Ajuda)
       _internal/elexplan/webui/static/**   (index.html, css/, js/, vendor/uPlot)
 
     Sem o `static/` a janela do pywebview abre EM BRANCO: HTML/CSS/JS nao sao
@@ -498,9 +500,16 @@ def _elexplan_web_datas():
         (os.path.join(ELEXPLAN_DIR, "pim_config.json"), "."),
         (os.path.join(ELEXPLAN_DIR, "docs", "CRITERIOS_DE_CALCULO.md"), "docs"),
         (os.path.join(ELEXPLAN_DIR, "docs", "FORMATO_DE_ARQUIVOS.md"), "docs"),
+        (os.path.join(ELEXPLAN_DIR, "docs", "PASSO_A_PASSO.md"), "docs"),
     ):
         if os.path.isfile(src):
             datas.append((src, dst))
+
+    # Exemplos de entrada e saida da Ajuda (docs/exemplos, com subpastas).
+    for dirpath, _dirnames, filenames in os.walk(os.path.join(ELEXPLAN_DIR, "docs", "exemplos")):
+        destino = os.path.relpath(dirpath, ELEXPLAN_DIR)
+        for nome in filenames:
+            datas.append((os.path.join(dirpath, nome), destino))
 
     # Arvore completa do static/ preservando as subpastas (css, js, vendor).
     for dirpath, _dirnames, filenames in os.walk(ELEXPLAN_STATIC_DIR):
@@ -518,7 +527,8 @@ def _cadastro_datas():
     Em frozen, HERE == _MEIPASS.
     """
     datas = []
-    for pattern in ("*.html", "*.js", "*.css"):
+    # *.md: o passo a passo que o [Ajuda] do topo abre (26/10/2026).
+    for pattern in ("*.html", "*.js", "*.css", "*.md"):
         for f in glob.glob(os.path.join(CADASTRO_WEB_DIR, pattern)):
             datas.append((f, "."))
     return datas
