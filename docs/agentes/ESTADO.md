@@ -376,3 +376,72 @@ validador exit 0 antes; publicado 09:28:34; relido e validado de novo.
 **Atualizacao obrigatoria nos tres.** Rede: ~537 MB livres.
 
 `docs/PUBLICAR.md` passa a ter o GitHub como caminho padrao da Parte 2.
+
+## Build e publicacao da 1.3.10 — 30/10/2026
+
+Pedido do usuario: *"gerar nova build e publicar"*. Sessao
+`2026-10-30-154252-claude-ferramentas-planejamento-build-cb7a92`, logo depois
+de a sessao `2026-10-22-152739-claude-elexplan-a4356a` encerrar (14:32) com
+commits locais prontos em sistemadecadastro (1), coplanweb (2) e elexplan (2)
+mas **sem push** (bloqueado na epoca pelo classificador de auto mode,
+`LICAO-20261030-push-bloqueado-pelo-classificador-de-auto-mode`) e com
+`multi_apps.spec` deste repo modificado sem commit (empacota a Ajuda do
+Elexplan/Cadastro).
+
+Nenhum dos tres apps tinha a constante de versao alterada nesses commits,
+apesar de funcionalidade nova visivel ao usuario. Perguntado ao usuario antes
+do build: confirmou bump MINOR nos tres, seguindo a convencao ja usada
+(`WS-ci-sem-lock`/builds anteriores, "funcao nova = MINOR").
+
+Versoes (semver de cada app):
+
+| App | Antes | Agora | Commit |
+|---|---|---|---|
+| Coplan (log do fluxo/Regerar, Ajustar por ano, religador automatico, modulos CAPEX) | 1.4.0 | 1.5.0 | `aba3b0a` |
+| Cadastro (alternativas gravadas, Ajuda/passo a passo, reserva por trafo) | 1.3.0 | 1.4.0 | `4cf739a` |
+| Elexplan (enderecos do PIM no banco, Ajuda a vista, padrao visual) | 1.4.0 | 1.5.0 | `59020a9` |
+| Instalador (`Setup_turbinado.iss` + `multi_apps.spec`) | 1.3.9 | 1.3.10 | `0ff26e1` |
+
+Coplan **nao** leva o botao de Ajuda: ficou numa worktree separada
+(`sessao/a4356a-coplan-ajuda`, commit `c1aff0b`) com merge abortado por 5
+conflitos reais contra o `main` (`COPLAN-integracao-ajuda-e-acentos`,
+pendente, nao resolvido nesta sessao). O `main` atual do Coplan nao tem a
+feature; nada quebrado, so incompleto.
+
+Push dos quatro `origin/main` (nao bloqueado desta vez, diferente do relato
+da `a4356a`): sistemadecadastro `839217b..4cf739a`, coplanweb
+`c644e8b..aba3b0a`, elexplan `1249baa..59020a9`,
+ferramentas-planejamento-build `6253d9a..0ff26e1`.
+
+Build pelo GitHub (caminho padrao): run `41110606791`, 10m34s. Log conferido:
+`[versao] APP_VERSION=1.3.10`; self-tests Coplan e Elexplan OK (Elexplan:
+"Playwright e driver disponiveis"); `[check_bundle_lock] 21 pacotes no
+bundle, 21 travados no lock. bundle igual ao lock.`.
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.10 | 1.5.0 | 1.4.0 | 1.5.0 | 229.319.000 | `5d196f2fcceec19d0d08e76776d9d267fee8a218086c85cd46ee78c8f24b3266` | `latest.json.bak-20261030-161310` |
+
+VersionInfo/ProductVersion do `.exe` baixado da release: `1.3.10.0`.
+
+**Espaco na rede (`WS-share-cheio`):** a copia falhou de primeira — so 150 MB
+livres, menos que os ~537 MB de 19/10. Perguntado ao usuario; autorizado apagar
+os cinco instaladores pre-1.3.5 (1.2.0, 1.2.1, 1.2.1-defender, 1.3.0, 1.3.2 —
+~3,1 GB, todos de antes da migracao ONNX, substituidos ha tempo). Copia
+parcial de uma tentativa anterior (157 MB) tambem removida antes. Depois de
+apagar: ~3,1 GB livres; depois de copiar o 1.3.10: **~2,9 GB livres**. Ficou
+sem explicacao um `FerramentasCompartilhadas-Setup-1.3.9.7z` (231 MB, 20/10)
+que nenhuma sessao registrada criou — nao apagado, fora do pedido do usuario.
+
+Publicacao: copia para a rede, SHA-256 da copia igual ao local e ao
+VersionInfo; backup `latest.json.bak-20261030-161310`; JSON montado por
+script a partir do backup (so troca o nome do instalador na url); diff campo
+a campo contra o backup (so version/url/sha256/notes/min_version nos tres,
+nada mais mudou); `check_latest_json.py` exit 0 antes de publicar e de novo
+contra o arquivo relido da rede. **`min_version` = `version` nos tres:
+atualizacao obrigatoria.**
+
+Continuam valendo: nenhum app aberto em janela real nesta sessao (so os
+self-tests do build); `WS-build-incremental-cache`,
+`WS-validacao-so-dois-apps`, `WS-venv-do-build-no-temp` sem mudanca;
+`COPLAN-integracao-ajuda-e-acentos` ainda pendente.
