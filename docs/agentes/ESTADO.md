@@ -445,3 +445,73 @@ Continuam valendo: nenhum app aberto em janela real nesta sessao (so os
 self-tests do build); `WS-build-incremental-cache`,
 `WS-validacao-so-dois-apps`, `WS-venv-do-build-no-temp` sem mudanca;
 `COPLAN-integracao-ajuda-e-acentos` ainda pendente.
+
+## Build e publicacao da 1.3.11 — 16-17/11/2026
+
+Pedido do usuario: *"gerar novo instalador e publicar"*. Sessao
+`2026-10-30-154252-claude-ferramentas-planejamento-build-cb7a92`. Fetch nos
+cinco repos; as sessoes posteriores a 30/10 estavam encerradas, exceto a
+`20f66a` do Elexplan (ativa, parada desde 05/11), cujo trabalho a `099a1d`
+(Codex) ja tinha consolidado no `main`.
+
+**Achado bloqueante no Coplan.** Desde `8dd18a7` (11/11) o
+`backend/domains/diagnostico.py` do `main` importava, dentro das funcoes,
+`core.diagnostico.gambiarra_plano`, `core.services.gambiarra_ticket_medio_service`
+e `core.diagnostico.brt_corrente` — modulos que so existiam sem commit na
+pasta (`COPLAN-20261111-backlog-sessoes-sem-registro`). O build clona o
+`main`: as ETs de gambiarra e o BRT do Diagnostico dariam
+`ModuleNotFoundError` no app instalado (o boot passa; o self-test do Coplan
+nao pegaria). A 1.3.10 nao foi afetada. Achado com um verificador AST de
+imports internos sobre `git archive origin/main` dos tres apps: Coplan com
+7 imports sem resolver (so esses), Elexplan e Cadastro com 0. Por decisao do
+usuario entraram so os 3 modulos e os 2 testes deles (`af2c7fe`); exportacao
+limpa do commit com 0 imports sem resolver e suite Python 1594 passaram. O
+resto do backlog, o item 10 de 13/11 (`_diag_interplan_rodando` e o teste
+dele) e o `config.json` continuam na pasta do Coplan, sem commit.
+
+**Ajustes no spec (`3da7d91`):**
+- `core/diagnostico/gambiarra/*.ps1` + `lib/*.psm1` do Coplan (chamados por
+  `subprocess`, resolvidos por `__file__` -> `_internal/core/diagnostico/
+  gambiarra/`). Era uma mudanca de 04/11 sem commit e sem registro de sessao
+  nesta pasta; revisada e mantida. O `Coplan.spec` do proprio Coplan tambem
+  nao tem esses scripts (assunto do Coplan).
+- `docs/CRITERIOS_TRANSFORMADORES.md` do Elexplan, aberto pela Ajuda
+  (`get_doc("transformadores")`) e ja presente no `build-exe.yml` do Elexplan.
+  Sem ele a Ajuda diria "arquivo nao encontrado nesta instalacao".
+
+Dependencias novas: `numpy` (Coplan, declarado) e `pywin32` (Coplan e
+Elexplan, DPAPI do "lembrar senha", import lazy com fallback) — ambos ja no
+lock. `check_requirements.py` exit 0.
+
+Versoes (usuario confirmou MINOR):
+
+| App | Antes | Agora | Commit |
+|---|---|---|---|
+| Coplan (Status do plano, ETs de gambiarra, BRT, risco do corte, cabo suspeito, aceite visivel, visao RR) | 1.5.0 | 1.6.0 | `af2c7fe` |
+| Cadastro (sem commit desde a 1.3.10) | 1.4.0 | 1.4.0 | — |
+| Elexplan (Transformadores, Carregamento, PIM mais rapido, conversao do banco, Way2, taxas crua) | 1.5.0 | 1.6.0 | `a8d7388` |
+| Instalador | 1.3.10 | 1.3.11 | `3da7d91` |
+
+Push dos tres sem bloqueio. O workflow so tem `workflow_dispatch` (push nao
+builda). Run `44074387592`, 8m19s: `[versao] APP_VERSION=1.3.11`; self-tests
+Coplan e Elexplan OK; `check_bundle_lock` 21/21; nenhuma falha de
+`collect_submodules` no log. O log do Inno Setup lista os 7 `.ps1` +
+`InterplanDb.psm1`, `CRITERIOS_TRANSFORMADORES.md`, `win32\win32crypt.pyd` e
+os JS novos do Elexplan.
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.11 | 1.6.0 | 1.4.0 | 1.6.0 | 229.672.417 | `bb908add55c61cca55bf5e3568a8b436aadc15be87606f74ea972b087fa97456` | `latest.json.bak-20261117-084133` |
+
+VersionInfo `1.3.11.0`. Publicacao em 17/11 08:42:40: copia com SHA-256
+igual ao local; backup; JSON montado por script a partir do backup (url so
+troca o nome; Cadastro muda so url/sha256; Coplan e Elexplan tambem
+version/min_version/notes); `check_latest_json.py` exit 0 antes e contra o
+relido da rede (identico ao montado). **Atualizacao obrigatoria** no Coplan
+e no Elexplan; no Cadastro `min_version` segue 1.4.0. Rede: ~2,6 GB livres.
+
+Continuam valendo: nenhum app aberto em janela real; so Coplan e Elexplan
+tem self-test, e nenhum dos dois passa pelas funcoes novas.
+**Proposta:** levar o verificador de imports internos para
+`scripts/` e rodar no workflow — e a segunda vez que o `main` de um app
+depende de arquivo nao commitado (a primeira foi o cabo suspeito, 16/11).
