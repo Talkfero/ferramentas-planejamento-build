@@ -460,6 +460,13 @@ def _coplan_web_datas():
     nao derruba o export) — sumiu no instalador compartilhado porque este
     spec e' separado do coplanweb/scripts/build/Coplan.spec (que ja tem
     o datas equivalente).
+
+    `core/diagnostico/gambiarra/*.ps1` + `lib/InterplanDb.psm1` (04/11/2026,
+    [RB-DIAG-GAMBIARRA]): scripts PowerShell que leem/escrevem o rede.mdb do
+    Interplan via ODBC para o plano de ETs de gambiarra — chamados por
+    `subprocess` em `backend/domains/diagnostico.py`, nao sao `.py`, entao
+    tambem nao entram na analise estatica de imports (primeiro precedente de
+    `.ps1` bundlado neste spec).
     """
     datas = []
     index = os.path.join(COPLAN_FRONTEND_DIR, "index.html")
@@ -473,6 +480,11 @@ def _coplan_web_datas():
     for asset in glob.glob(os.path.join(COPLAN_DIR, "capex_engine", "assets", "*")):
         if os.path.isfile(asset):
             datas.append((asset, os.path.join("capex_engine", "assets")))
+    gambiarra_dir = os.path.join(COPLAN_DIR, "core", "diagnostico", "gambiarra")
+    for script in glob.glob(os.path.join(gambiarra_dir, "*.ps1")):
+        datas.append((script, os.path.join("core", "diagnostico", "gambiarra")))
+    for module in glob.glob(os.path.join(gambiarra_dir, "lib", "*.psm1")):
+        datas.append((module, os.path.join("core", "diagnostico", "gambiarra", "lib")))
     return datas
 
 
@@ -488,6 +500,7 @@ def _elexplan_web_datas():
       _internal/docs/CRITERIOS_DE_CALCULO.md
       _internal/docs/FORMATO_DE_ARQUIVOS.md
       _internal/docs/PASSO_A_PASSO.md
+      _internal/docs/CRITERIOS_TRANSFORMADORES.md   (Ajuda > Transformadores)
       _internal/docs/exemplos/**           (entrada/ e saida/ da Ajuda)
       _internal/elexplan/webui/static/**   (index.html, css/, js/, vendor/uPlot)
 
@@ -501,6 +514,7 @@ def _elexplan_web_datas():
         (os.path.join(ELEXPLAN_DIR, "docs", "CRITERIOS_DE_CALCULO.md"), "docs"),
         (os.path.join(ELEXPLAN_DIR, "docs", "FORMATO_DE_ARQUIVOS.md"), "docs"),
         (os.path.join(ELEXPLAN_DIR, "docs", "PASSO_A_PASSO.md"), "docs"),
+        (os.path.join(ELEXPLAN_DIR, "docs", "CRITERIOS_TRANSFORMADORES.md"), "docs"),
     ):
         if os.path.isfile(src):
             datas.append((src, dst))
