@@ -554,6 +554,12 @@ Semente `base-1.3.11`: zip da release `latest` do run `44074387592` (SHA-256
 `3204a046…aafa8`; instalador da mesma release `bb908add…` = publicado);
 manifesto montado dos commits do run (Coplan `af2c7fe`, Elexplan `a8d7388`,
 Cadastro `4cf739a`, launcher `b05c83d`, build `3da7d91`), `deps_hash`
-`7b4343d0…19b` sobre 18 arquivos. **Enquanto a branch nao entrar no `main`,
-qualquer build pelo workflow do `main` apaga todas as releases, inclusive a
-`base-1.3.11`.**
+`7b4343d0…19b` sobre 18 arquivos. Release criada 16:31-16:41 (`gh release
+create`, alvo `3da7d91`, `--latest=false`): `bundle.zip` 322.663.671 bytes,
+digest do GitHub `3204a046…` (igual ao baixado); `manifest.json` `bb8b1aa6…`.
+`ultima-base` devolve `base-1.3.11` e `pendentes` (sem `--manifest`) baixa o
+manifesto dela. A `latest` (1.3.11) continua marcada como Latest.
+
+Integracao autorizada pelo usuario: `feat/base-publicada` enviada e `main`
+fast-forward `cb567a7..e54dddc` enviado. Nenhum build disparado; `gh workflow
+list` mostra "Build installer" e "Registrar base publicada" ativos.
