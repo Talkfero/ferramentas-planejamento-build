@@ -1,24 +1,26 @@
 <#
 .SYNOPSIS
-  Completa um bundle recem-compilado (parcial) com o bundle de um build FULL.
+  Completa um bundle recem-compilado (parcial) com o bundle da base publicada.
 
 .DESCRIPTION
   Serve ao build INCREMENTAL: o PyInstaller recompilou somente alguns apps
   (ex.: coplan_web), entao dist\FerramentasCompartilhadas tem o _internal com
-  as dependencias SO desses apps. Este script traz do bundle base (cache do
-  ultimo build completo) tudo o que faltou -- os .exe dos outros apps e as
-  libs exclusivas deles.
+  as dependencias SO desses apps. Este script traz do bundle base (release
+  base-<versao>, o bundle da ultima publicacao; WS-20261118-base-publicada)
+  tudo o que faltou -- os .exe dos outros apps e as libs exclusivas deles.
 
   REGRA: o que o build novo produziu SEMPRE vence. Do base vem apenas o
   arquivo que NAO existe no bundle novo. Por isso o .exe recem-compilado, os
   datas novos (frontend/*.js, index.html...) e qualquer dependencia nova
-  ficam intactos.
+  ficam intactos. Consequencia: arquivo que o app recompilado deixou de ter
+  continua vindo da base ate o proximo build completo.
 
-  Por que isso e' seguro: o cache do bundle base e' chaveado pelo conjunto de
-  DEPENDENCIAS (requirements.lock.txt + multi_apps.spec + runtime_hooks +
-  os requirements dos apps). Se qualquer um mudar, a chave muda, o cache nao
-  bate e o workflow cai para build completo -- entao um arquivo vindo do base
-  e' sempre da mesma versao de pacote que o build novo usaria.
+  Por que isso e' seguro: o workflow so' usa o modo incremental quando o
+  codigo do conjunto de DEPENDENCIAS (requirements.lock.txt + multi_apps.spec
+  + runtime_hooks + app_configs + os requirements dos apps, calculado por
+  scripts/bundle_manifest.py deps-hash) e' igual ao registrado na base. Se
+  algum mudar, cai para build completo -- entao um arquivo vindo do base e'
+  sempre da mesma versao de pacote que o build novo usaria.
 
   O bundle resultante e' COMPLETO, e isso e' verificado no fim: o
   [InstallDelete] do Setup_turbinado.iss apaga {app}\_internal antes de
@@ -26,7 +28,7 @@
   instalados sem as libs deles.
 
 .PARAMETER Base
-  Bundle completo restaurado do cache (ex.: bundle_base).
+  Bundle completo extraido da release base-<versao> (ex.: bundle_base).
 
 .PARAMETER Fresh
   Bundle recem-compilado, que sera completado in-place

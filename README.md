@@ -79,7 +79,7 @@ Ao trocar um `.exe` ja publicado na pasta de rede, **atualize tambem o
 3. Baixe o instalador na release mais recente em
    [Releases](../../releases/latest) (asset `FerramentasCompartilhadas-Setup-*.exe`).
 
-O workflow tem dois inputs, e eles respondem perguntas diferentes.
+O workflow tem quatro inputs, e eles respondem perguntas diferentes.
 
 **`apps` — qual INSTALADOR gerar:**
 
@@ -87,16 +87,59 @@ O workflow tem dois inputs, e eles respondem perguntas diferentes.
 - `coplan_web`, `cadastro` etc.: instalador parcial de um app.
   (`capex` e `diag` resolvem para `coplan_web`; `status` resolve para `elexplan`.)
 
-**`rebuild_only` — o que RECOMPILAR** (vazio = tudo):
+**`rebuild_only` — quais apps ENTRAM nesta versao** (vazio = todos do `main`):
 
-- vazio: o PyInstaller monta o bundle inteiro. E' o padrao.
-- `coplan_web`: recompila so' o Coplan e completa o bundle com o do ultimo
-  build completo, guardado em cache. Bem mais rapido — nem o `pip` nem o
-  PyInstaller tocam nas arvores pesadas dos apps que nao mudaram (torch e
-  sentence-transformers do Cadastro, PySide6 e playwright do Elexplan).
+- vazio: o PyInstaller monta o bundle inteiro, cada app no `main`.
+- `coplan_web` (ou uma lista): so' esses saem do `main`. Os outros ficam
+  **exatamente como na ultima publicacao** — ver "Base publicada" abaixo.
 
-Os dois sao independentes. Para "mexi so' no Coplan e quero o instalador
+**`base`** — tag da base a usar (ex.: `base-1.3.11`); vazio = a mais nova.
+
+**`completo`** — com `rebuild_only`, recompila todos mesmo com dependencias
+iguais, mantendo os nao escolhidos no commit publicado. Plano B se o
+incremental falhar; `rebuild_only` vazio pegaria o `main` de todos.
+
+Os inputs sao independentes. Para "mexi so' no Coplan e quero o instalador
 completo", use `apps=all` + `rebuild_only=coplan_web`.
+
+### Base publicada — versao de um app so'
+
+Decisao do usuario `WS-20261118-base-publicada` (18/11/2026). Depois de cada
+publicacao na rede, o workflow **Registrar base publicada**
+(`registrar-base.yml`) promove o bundle da release `latest` a uma release fixa
+`base-<versao>`, com `bundle.zip` e `manifest.json`. So' promove se o SHA-256
+do instalador da `latest` for o do arquivo publicado. Guarda as 5 mais novas.
+
+O `manifest.json` (gerado por `scripts/bundle_manifest.py gerar` em todo build)
+registra, por app: commit, SHA-256 do `.exe`, versao do build que o compilou e
+origem; e o codigo do conjunto de dependencias (`deps-hash`).
+
+Num build com `rebuild_only=coplan_web`:
+
+1. Os apps **nao** escolhidos voltam ao commit da base (`bundle_manifest.py
+   fixar`), nunca ao `main` — que pode ter trabalho pela metade.
+2. Dependencias iguais as da base -> **incremental**: compila so' o Coplan e
+   completa com o bundle da base (`overlay_bundle.ps1`). O manifesto
+   **reprova** o build se um `.exe` reaproveitado nao sair identico ao da base.
+3. Dependencias mudaram -> recompila **todos**, ainda com os nao escolhidos
+   no commit publicado. O `_internal` compartilhado exige isso.
+4. Sem nenhuma `base-*`, o build com `rebuild_only` falha e manda rodar completo.
+
+O instalador continua completo (~230 MB) e o `latest.json` nao muda de forma.
+Consequencias que valem saber:
+
+- `.exe` reaproveitado mantem a `FileVersion` do build que o gerou (ex.: o
+  Elexplan diz 1.3.11 dentro do instalador 1.3.12). O manifesto diz qual e' qual.
+- Arquivo que o app recompilado deixou de ter continua vindo da base ate o
+  proximo build completo: dados de apps diferentes dividem pastas do
+  `_internal`, entao nao da para limpar "as pastas do app" com seguranca.
+- Antes do build, `python scripts/bundle_manifest.py pendentes --fetch` lista,
+  por app, os commits do `main` que nao estao na ultima base, e avisa quando
+  requirements ou dependencias do build mudaram (o que forca build completo).
+
+Ate 18/11/2026 a base era o `actions/cache` do ultimo build completo: expirava
+com 7 dias sem uso (o `rebuild_only` caia sozinho para completo, pegando o
+`main` de todos) e podia ser um build de teste. Nenhuma publicacao chegou a usa-lo.
 
 ### O `_internal` sai SEMPRE completo — e por que isso nao e' negociavel
 
@@ -116,23 +159,24 @@ deles** — eles parariam de abrir.
 
 Por isso `apps=coplan_web` sozinho **nao** encolhe o bundle: sem
 `rebuild_only`, o PyInstaller compila tudo e o `apps` restringe apenas o passo
-do Inno. E com `rebuild_only`, o bundle parcial e' completado a partir do cache
-(`scripts/overlay_bundle.ps1`), que ao final **verifica se os 6 executaveis
-estao presentes** e derruba o build se faltar algum.
+do Inno. E com `rebuild_only`, o bundle parcial e' completado a partir da base
+publicada (`scripts/overlay_bundle.ps1`), que ao final **verifica se os 5
+executaveis estao presentes** e derruba o build se faltar algum.
 
 > Ate 31/07/2026 este README afirmava que o instalador parcial ja montava o
 > `_internal` completo. **Nao montava** — o workflow passava o `apps` tambem
 > para o PyInstaller. Quem gerasse um instalador parcial quebraria os demais
 > apps de quem o instalasse. Corrigido junto com a entrada do `rebuild_only`.
 
-### Como o cache do bundle e' invalidado
+### Quando a base deixa de servir
 
-A chave cobre so' o que define o conjunto de **dependencias** —
+O `deps-hash` cobre so' o que define o conjunto de **dependencias** —
 `requirements.lock.txt`, `multi_apps.spec`, `build_all_shared.bat`,
-`runtime_hooks/**`, `app_configs/**` e `apps/**/requirements*.txt` — e **nunca**
-o codigo-fonte dos apps. E' exatamente isso que deixa reaproveitar o bundle
-quando so' o codigo do Coplan mudou. Mudou dependencia? A chave muda, o cache
-nao bate e o workflow **cai sozinho para build completo**, avisando no log.
+`runtime_hooks/**`, `app_configs/**` e `apps/**/requirements*.txt` (fim de
+linha normalizado) — e **nunca** o codigo-fonte dos apps. E' exatamente isso
+que deixa reaproveitar o bundle quando so' o codigo do Coplan mudou. Mudou
+dependencia? O codigo muda e o workflow **cai sozinho para build completo**,
+avisando no log, com os nao escolhidos ainda no commit publicado.
 
 ### Onde o tempo do build realmente vai
 
@@ -151,17 +195,23 @@ O gargalo e' o **PyInstaller**, nao o download das libs — por isso o
 mais que o cache do pip. Os dois estao ligados assim mesmo: ha um
 `actions/cache` para os wheels do pip (`PIP_CACHE_DIR`), que recupera boa parte
 daqueles 4 min. Ele usa `restore-keys` com prefixo de proposito — o cache do
-pip e' aditivo e serve mesmo quando um requirements mudou, ao contrario do
-cache do bundle, que exige match exato.
+pip e' aditivo e serve mesmo quando um requirements mudou, ao contrario da
+base do bundle, que exige dependencias identicas.
+
+Medido de novo no run `44074387592` (1.3.11, completo, ~8 min): PyInstaller +
+pip 5m16s, Inno 1m43s, o resto abaixo de 1 min. O incremental corta a maior
+parte dos 5 min; o Inno continua (o instalador e' sempre completo).
 
 Para referencia local: um `build_all_local.ps1 -Apps coplan_web` leva ~2,3 min
-de PyInstaller nesta maquina, com o venv e o cache do pip ja quentes.
+de PyInstaller nesta maquina, com o venv e o cache do pip ja quentes. O build
+local nao usa a base: e' sempre completo.
 
 Duas consequencias que valem saber:
 
-- **So' o build completo alimenta o cache.** Um bundle incremental e' mistura
-  (app novo + base antigo); cachear isso empilharia deriva a cada rodada. O
-  base e' sempre fruto de um build completo de verdade.
+- **A base e' sempre o que foi publicado.** Um bundle incremental e' mistura
+  (app novo + base anterior), e e' de proposito que ele vira a proxima base:
+  e' exatamente o que esta instalado nos colegas. O manifesto encadeia a
+  origem de cada `.exe`.
 - **`STRICT_COLLECT=1` no modo incremental.** Por padrao o
   `_collect_all_safe` do spec so' avisa quando um pacote nao esta no venv (para
   um build parcial do app A nao morrer por dependencia do app B). No
@@ -172,8 +222,8 @@ Duas consequencias que valem saber:
   `STRICT_COLLECT=1` a coleta que falhar derruba o build.
 
 Cada build publica uma unica release com a tag fixa `latest`: o workflow apaga as
-releases e os artifacts antigos e recria a release com o instalador novo, entao a
-pagina de Releases sempre tem apenas o ultimo build.
+releases (menos as `base-*`) e os artifacts antigos e recria a release com o
+instalador novo, o `portable.zip` e o `manifest.json`.
 
 > **O build NAO roda sozinho no merge** (desde 31/07/2026). O gatilho `push` na
 > `main` foi removido: como cada build **republica a `latest` apagando a

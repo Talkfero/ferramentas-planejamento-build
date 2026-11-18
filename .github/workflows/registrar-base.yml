@@ -1,0 +1,94 @@
+name: Registrar base publicada
+
+# Roda DEPOIS de publicar na rede (docs/PUBLICAR.md, Parte 3, ultimo passo).
+# Promove o bundle do instalador que acabou de ser publicado -- o da release
+# rolling `latest` -- a release FIXA `base-<versao>`. E' dela que o proximo
+# build com `rebuild_only` tira os apps que nao mudaram.
+# Decisao WS-20261118-base-publicada (usuario, 18/11/2026).
+#
+# A conferencia que importa e' o SHA-256: so' vira base o bundle cujo
+# instalador e' o MESMO arquivo publicado na rede. Se outro build substituiu a
+# `latest` depois da publicacao, o SHA nao bate e nada e' registrado.
+on:
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versao do instalador publicado na rede (ex.: 1.3.12)"
+        required: true
+      sha256:
+        description: "SHA-256 do instalador publicado (o mesmo do latest.json)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  registrar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Promover a release latest a base-<versao>
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSAO: ${{ github.event.inputs.versao }}
+          SHA_ESPERADO: ${{ github.event.inputs.sha256 }}
+          MANTER: "5"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $repo = $env:GITHUB_REPOSITORY
+          $v = "$env:VERSAO".Trim()
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "versao invalida: '$v' (esperado X.Y.Z)" }
+          $esperado = "$env:SHA_ESPERADO".Trim().ToLowerInvariant()
+          if ($esperado -notmatch '^[0-9a-f]{64}$') { throw "sha256 invalido: '$esperado'" }
+
+          $nome = "FerramentasCompartilhadas-Setup-$v.exe"
+          New-Item -ItemType Directory -Force -Path dl | Out-Null
+          gh release download latest --repo $repo -D dl -p $nome -p FerramentasCompartilhadas-portable.zip -p manifest.json
+          if ($LASTEXITCODE -ne 0) {
+            throw ("A release latest nao tem $nome + portable.zip + manifest.json. " +
+                   "Instalador parcial, build anterior a 18/11/2026, ou outro build substituiu a latest.")
+          }
+
+          $sha = (Get-FileHash "dl/$nome" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne $esperado) {
+            throw "O instalador da latest ($sha) nao e' o publicado ($esperado). Nada registrado."
+          }
+          $m = Get-Content dl/manifest.json -Raw | ConvertFrom-Json
+          if ($m.versao_instalador -ne $v) { throw "manifest.json e' da $($m.versao_instalador), nao da $v." }
+          if ("$($m.instalador.sha256)".ToLowerInvariant() -ne $esperado) {
+            throw "manifest.json descreve outro instalador ($($m.instalador.sha256))."
+          }
+          Write-Host "[base] instalador $nome confere ($sha); run $($m.run_id), modo $($m.modo)"
+
+          Move-Item dl/FerramentasCompartilhadas-portable.zip dl/bundle.zip
+          $tag = "base-$v"
+          gh release view $tag --repo $repo *> $null
+          if ($LASTEXITCODE -eq 0) {
+            # Republicacao na mesma versao (ja aconteceu na 1.3.8 e na 1.3.9):
+            # a base passa a ser o que esta na rede agora.
+            Write-Host "[base] $tag ja existia; substituindo."
+            gh release delete $tag --repo $repo --cleanup-tag --yes
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao remover a $tag anterior." }
+          }
+
+          $linhas = foreach ($p in $m.apps.PSObject.Properties) {
+            "- $($p.Name): commit $($p.Value.commit.Substring(0,7)), compilado na $($p.Value.compilado_em) ($($p.Value.origem))"
+          }
+          $notes = "Bundle publicado na rede com o instalador $v (SHA-256 $sha).`n" +
+                   "Modo $($m.modo); base anterior: $(if ($m.base) { $m.base } else { 'nenhuma' }).`n`n" +
+                   ($linhas -join "`n")
+          gh release create $tag dl/bundle.zip dl/manifest.json --repo $repo --target $m.build_sha `
+            --title "Base publicada $v" --notes $notes --latest=false
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a release $tag." }
+          Write-Host "[base] $tag registrada."
+
+          # Retencao: as N bases mais novas (por versao, nao por data).
+          $bases = gh release list --repo $repo --limit 200 --json tagName | ConvertFrom-Json |
+                   Where-Object { $_.tagName -match '^base-\d+\.\d+\.\d+$' } |
+                   Sort-Object { [version]($_.tagName -replace '^base-', '') } -Descending
+          $manter = [int]$env:MANTER
+          foreach ($b in @($bases | Select-Object -Skip $manter)) {
+            Write-Host "[base] retencao: removendo $($b.tagName)"
+            gh release delete $b.tagName --repo $repo --cleanup-tag --yes
+          }

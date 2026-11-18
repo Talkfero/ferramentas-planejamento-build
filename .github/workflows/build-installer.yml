@@ -21,9 +21,18 @@ on:
         required: false
         default: "all"
       rebuild_only:
-        description: "Recompilar SOMENTE estes apps e reaproveitar o resto do ultimo build completo (cache). Vazio = recompila tudo. Ex.: coplan_web"
+        description: "Apps que entram nesta versao (ex.: coplan_web). Os demais ficam como na ultima publicacao (release base-*): mesmo commit e, se as dependencias nao mudaram, o mesmo .exe. Vazio = recompila tudo do main."
         required: false
         default: ""
+      base:
+        description: "Tag da base publicada a reaproveitar (ex.: base-1.3.11). Vazio = a mais recente. So' vale com rebuild_only."
+        required: false
+        default: ""
+      completo:
+        description: "Com rebuild_only: recompilar TODOS mesmo com dependencias iguais (os nao escolhidos seguem no commit publicado). Plano B se o incremental falhar."
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: write
   actions: write
@@ -69,8 +78,8 @@ jobs:
       #
       # `restore-keys` com prefixo e' de proposito: o cache do pip e' ADITIVO,
       # entao serve mesmo quando um requirements mudou (restaura o mais recente
-      # e o pip baixa so' o que faltar). Diferente do cache do bundle, que exige
-      # match exato -- ali um arquivo velho corromperia o resultado.
+      # e o pip baixa so' o que faltar). Diferente da base do bundle, que exige
+      # dependencias identicas -- ali um arquivo velho corromperia o resultado.
       #
       # Precisa vir DEPOIS do prepare_apps: a chave hasheia os requirements dos
       # apps, que so' existem depois do clone.
@@ -83,77 +92,109 @@ jobs:
             pip-${{ runner.os }}-py312-
 
       # =================================================================
-      # Modo de build
+      # Modo de build -- base publicada (WS-20261118-base-publicada)
       #
-      # rebuild_only VAZIO -> FULL: o PyInstaller monta o bundle inteiro.
-      #   Vale MESMO com apps=<uma chave>. O instalador parcial precisa de um
-      #   _internal COMPLETO porque o [InstallDelete] do Setup_turbinado.iss
-      #   apaga {app}\_internal antes de instalar -- um _internal so' do app
-      #   escolhido deixaria os OUTROS apps ja instalados sem as libs deles
-      #   (PySide6, playwright, snowflake, torch...).
+      # rebuild_only VAZIO -> FULL: o PyInstaller monta o bundle inteiro,
+      #   cada app no `main`. Vale MESMO com apps=<uma chave>. O instalador
+      #   parcial precisa de um _internal COMPLETO porque o [InstallDelete]
+      #   do Setup_turbinado.iss apaga {app}\_internal antes de instalar.
       #
-      # rebuild_only PREENCHIDO -> INCREMENTAL: recompila so' esses apps e
-      #   completa o bundle com o cache do ultimo build FULL. Muito mais
-      #   rapido, porque nem o pip nem o PyInstaller tocam nas arvores
-      #   pesadas dos apps que nao mudaram.
+      # rebuild_only PREENCHIDO (ex.: coplan_web) -> so' esses apps saem do
+      #   `main`. Os outros voltam ao commit da ULTIMA PUBLICACAO, registrado
+      #   na release fixa `base-<versao>` (ou na do input `base`), e nunca ao
+      #   `main` -- que pode ter trabalho pela metade.
+      #   - Dependencias iguais as da base -> INCREMENTAL: o .exe dos outros
+      #     vem do bundle publicado, byte a byte (o manifesto confere).
+      #   - Dependencias mudaram -> FULL, mas os nao escolhidos ainda saem do
+      #     commit publicado. O _internal compartilhado exige isso.
+      #
+      # Ate 18/11/2026 a base era o actions/cache do ultimo build FULL: expira
+      # com 7 dias sem uso (o incremental caia sozinho para full, pegando o
+      # `main` de todos) e podia ser um build de teste, nao o publicado.
       # =================================================================
-      - name: Decidir modo de build
-        id: mode
+      - name: Decidir modo de build (base publicada)
+        id: final_mode
         shell: pwsh
         env:
           REBUILD_ONLY: ${{ github.event.inputs.rebuild_only }}
+          BASE_TAG: ${{ github.event.inputs.base }}
+          FORCAR_COMPLETO: ${{ github.event.inputs.completo }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          $ErrorActionPreference = "Stop"
           $rebuild = "$env:REBUILD_ONLY".Trim().ToLowerInvariant()
           if ($rebuild -eq "all") { $rebuild = "" }
+          $mode = "full"; $apps = "all"; $escolhidos = ""; $tag = ""
+
           if ($rebuild) {
-            "mode=incremental"       | Out-File $env:GITHUB_OUTPUT -Append
-            "apps_to_build=$rebuild" | Out-File $env:GITHUB_OUTPUT -Append
-          } else {
-            "mode=full"              | Out-File $env:GITHUB_OUTPUT -Append
-            "apps_to_build=all"      | Out-File $env:GITHUB_OUTPUT -Append
+            $escolhidos = (python .\scripts\bundle_manifest.py normalizar "$rebuild" | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0 -or -not $escolhidos) { throw "rebuild_only invalido: $rebuild" }
+            $tag = "$env:BASE_TAG".Trim()
+            if (-not $tag) {
+              $tag = (python .\scripts\bundle_manifest.py ultima-base --repo "$env:GITHUB_REPOSITORY" | Out-String).Trim()
+              if ($LASTEXITCODE -ne 0) { throw "Falha ao listar as releases base-*." }
+            }
+            if (-not $tag) {
+              throw ("Nenhuma base publicada (release base-*). Rode com rebuild_only vazio; " +
+                     "a Parte 3 do docs/PUBLICAR.md registra a base depois de publicar.")
+            }
+            Write-Host "[base] $tag"
+            gh release download $tag --repo "$env:GITHUB_REPOSITORY" -p manifest.json -D base_dl --clobber
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao baixar o manifest.json da $tag." }
+            python .\scripts\bundle_manifest.py fixar --base-manifest base_dl\manifest.json --escolhidos "$escolhidos" --root .
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao fixar os apps nao escolhidos no commit da $tag." }
           }
 
-      # A chave cobre SO' o que define o conjunto de dependencias -- nunca o
-      # codigo-fonte dos apps. E' isso que permite reaproveitar o bundle
-      # quando so' o codigo do Coplan mudou. Mexeu em requirements/spec/hooks?
-      # A chave muda, o cache nao bate e cai para build completo sozinho.
-      - name: Restaurar bundle base (cache)
-        id: bundle_cache
-        if: steps.mode.outputs.mode == 'incremental'
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.BUNDLE_DIR }}
-          key: bundle-v2-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
+          # Depois do `fixar`: os requirements dos nao escolhidos ja sao os da base.
+          $deps = (python .\scripts\bundle_manifest.py deps-hash --root . | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or -not $deps) { throw "Falha ao calcular o codigo das dependencias." }
+          Write-Host "[deps] $deps"
 
-      - name: Confirmar modo (cache miss volta para build completo)
-        id: final_mode
+          if ($rebuild) {
+            $base = Get-Content base_dl\manifest.json -Raw | ConvertFrom-Json
+            if ("$env:FORCAR_COMPLETO" -eq "true") {
+              Write-Host "[modo] completo=true: recompilando TODOS; os apps fora de rebuild_only seguem no commit publicado."
+            } elseif ($base.deps_hash -eq $deps) {
+              $mode = "incremental"; $apps = $escolhidos
+            } else {
+              Write-Host ("::warning::As dependencias mudaram desde a $tag (requirements, lock, spec ou hooks). " +
+                          "Recompilando TODOS; os apps fora de rebuild_only seguem no commit publicado, nao no main.")
+            }
+          }
+
+          Write-Host "[modo] $mode  |  APPS_TO_BUILD=$apps  |  escolhidos=$escolhidos  |  base=$tag  |  instalador=${{ github.event.inputs.apps || 'all' }}"
+          "mode=$mode"             | Out-File $env:GITHUB_OUTPUT -Append
+          "apps_to_build=$apps"    | Out-File $env:GITHUB_OUTPUT -Append
+          "escolhidos=$escolhidos" | Out-File $env:GITHUB_OUTPUT -Append
+          "base_tag=$tag"          | Out-File $env:GITHUB_OUTPUT -Append
+          "deps_hash=$deps"        | Out-File $env:GITHUB_OUTPUT -Append
+
+      # O zip e' o FerramentasCompartilhadas-portable.zip do build publicado.
+      # tar do System32 (bsdtar) le zip e e' bem mais rapido que Expand-Archive.
+      - name: Baixar o bundle da base
+        if: steps.final_mode.outputs.mode == 'incremental'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $mode = "${{ steps.mode.outputs.mode }}"
-          $apps = "${{ steps.mode.outputs.apps_to_build }}"
-          if ($mode -eq "incremental" -and "${{ steps.bundle_cache.outputs.cache-hit }}" -ne "true") {
-            Write-Host "::warning::Bundle base nao encontrado no cache (as dependencias mudaram, ou este e o primeiro build com esta chave). Caindo para build COMPLETO."
-            $mode = "full"
-            $apps = "all"
+          $ErrorActionPreference = "Stop"
+          $tag = "${{ steps.final_mode.outputs.base_tag }}"
+          gh release download $tag --repo "$env:GITHUB_REPOSITORY" -p bundle.zip -D base_dl --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao baixar o bundle.zip da $tag." }
+          New-Item -ItemType Directory -Force -Path "${{ env.BUNDLE_BASE_DIR }}" | Out-Null
+          & "$env:SystemRoot\System32\tar.exe" -xf base_dl\bundle.zip -C "${{ env.BUNDLE_BASE_DIR }}"
+          if ($LASTEXITCODE -ne 0) { throw "Falha ao extrair o bundle da $tag." }
+          if (-not (Test-Path "${{ env.BUNDLE_BASE_DIR }}\_internal\base_library.zip")) {
+            throw "bundle.zip da $tag nao tem _internal\base_library.zip."
           }
-          Write-Host "[modo] $mode  |  APPS_TO_BUILD=$apps  |  instalador=${{ github.event.inputs.apps || 'all' }}"
-          "mode=$mode"          | Out-File $env:GITHUB_OUTPUT -Append
-          "apps_to_build=$apps" | Out-File $env:GITHUB_OUTPUT -Append
+          Remove-Item base_dl\bundle.zip -Force
+          $n = @(Get-ChildItem "${{ env.BUNDLE_BASE_DIR }}" -Recurse -File -Force).Count
+          Write-Host "[bundle base] $tag extraido: $n arquivo(s)"
 
       - name: Validar layout dos apps a compilar
         shell: pwsh
         run: |
           python .\scripts\validate_layout.py --apps "${{ steps.final_mode.outputs.apps_to_build }}"
-
-      # build_all_shared.bat apaga dist\FerramentasCompartilhadas antes de
-      # compilar. Tira o bundle do cache da frente com um rename (instantaneo,
-      # mesmo volume) em vez de copiar ~1,5 GB.
-      - name: Separar o bundle base antes de compilar
-        if: steps.final_mode.outputs.mode == 'incremental'
-        shell: pwsh
-        run: |
-          Move-Item "${{ env.BUNDLE_DIR }}" "${{ env.BUNDLE_BASE_DIR }}" -Force
-          Write-Host "[bundle base] movido para ${{ env.BUNDLE_BASE_DIR }}"
 
       # Os .exe do PyInstaller saiam SEM metadado de versao (FileVersion,
       # ProductName e CompanyName vazios). Binario anonimo, sem assinatura e
@@ -191,7 +232,12 @@ jobs:
         run: |
           call build_all_shared.bat %APPS_TO_BUILD%
 
-      - name: Completar o bundle com o base do cache
+      # O recem-compilado vence; da base vem so' o que falta (os .exe e as
+      # libs dos apps nao escolhidos). Arquivo que o app escolhido deixou de
+      # ter continua vindo da base ate o proximo build completo: os dados de
+      # apps diferentes dividem pastas do _internal, entao nao da para limpar
+      # "as pastas do app" com seguranca. Sem efeito enquanto nada listar a pasta.
+      - name: Completar o bundle com o da base publicada
         if: steps.final_mode.outputs.mode == 'incremental'
         shell: pwsh
         run: |
@@ -217,17 +263,6 @@ jobs:
         shell: pwsh
         run: |
           python scripts\check_bundle_lock.py "${{ env.BUNDLE_DIR }}"
-
-      # So' o build FULL alimenta o cache. Um bundle incremental e' uma mistura
-      # (app novo + base antigo); cachear isso empilharia deriva a cada rodada.
-      # Assim o base e' sempre fruto de um build completo de verdade.
-      - name: Guardar bundle base (cache)
-        if: steps.final_mode.outputs.mode == 'full'
-        continue-on-error: true
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.BUNDLE_DIR }}
-          key: bundle-v2-${{ runner.os }}-py312-${{ hashFiles('requirements.lock.txt', 'multi_apps.spec', 'build_all_shared.bat', 'runtime_hooks/**', 'app_configs/**', 'apps/**/requirements*.txt') }}
 
       - name: Install Inno Setup
         shell: pwsh
@@ -259,9 +294,28 @@ jobs:
           if (-not $installer) { throw "Instalador .exe nao encontrado em Output\" }
           Copy-Item $installer.FullName -Destination release\ -Force
           Write-Host "Instalador: $($installer.Name)"
-          if (Test-Path dist\FerramentasCompartilhadas) {
-            Compress-Archive -Path dist\FerramentasCompartilhadas\* -DestinationPath release\FerramentasCompartilhadas-portable.zip -Force
+
+          # Manifesto: o que o registrar-base.yml promove a base depois da
+          # publicacao. No incremental ele REPROVA se um .exe reaproveitado
+          # nao saiu identico ao da base.
+          $margs = @(".\scripts\bundle_manifest.py", "gerar",
+                     "--bundle", "${{ env.BUNDLE_DIR }}", "--root", ".",
+                     "--versao", "${{ steps.suite_version.outputs.value }}",
+                     "--modo", "${{ steps.final_mode.outputs.mode }}",
+                     "--deps-hash", "${{ steps.final_mode.outputs.deps_hash }}",
+                     "--instalador", $installer.FullName,
+                     "--build-sha", "${{ github.sha }}", "--run-id", "${{ github.run_id }}",
+                     "--saida", "release\manifest.json")
+          $baseTag = "${{ steps.final_mode.outputs.base_tag }}"
+          if ($baseTag) {
+            $margs += @("--escolhidos", "${{ steps.final_mode.outputs.escolhidos }}",
+                        "--base-manifest", "base_dl\manifest.json", "--base-tag", $baseTag)
           }
+          python @margs
+          if ($LASTEXITCODE -ne 0) { throw "Manifesto do bundle reprovado." }
+
+          # O zip e' tambem o bundle que vira base-<versao> depois da publicacao.
+          Compress-Archive -Path dist\FerramentasCompartilhadas\* -DestinationPath release\FerramentasCompartilhadas-portable.zip -Force
 
       - name: Publish rolling release (replaces previous)
         shell: pwsh
@@ -271,18 +325,22 @@ jobs:
           INSTALLER_APP: ${{ github.event.inputs.apps || 'all' }}
           BUNDLE_APPS: ${{ steps.final_mode.outputs.apps_to_build }}
           BUILD_MODE: ${{ steps.final_mode.outputs.mode }}
+          BASE_TAG: ${{ steps.final_mode.outputs.base_tag }}
           COMMIT_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
           $ErrorActionPreference = "Stop"
-          # Apaga TODAS as releases existentes para manter somente a mais nova
+          # Apaga as releases antigas para manter so' a mais nova -- MENOS as
+          # base-*, que sao o registro permanente do que foi publicado.
           $old = gh release list --repo $env:GITHUB_REPOSITORY --limit 200 --json tagName | ConvertFrom-Json
           foreach ($r in $old) {
+            if ($r.tagName -like "base-*") { continue }
             Write-Host "Removendo release antiga: $($r.tagName)"
             gh release delete $r.tagName --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
           }
           $assets = Get-ChildItem release\* | ForEach-Object { $_.FullName }
-          $notes = "Build automatico do instalador. Instalador: $($env:INSTALLER_APP). Modo: $($env:BUILD_MODE) (recompilado: $($env:BUNDLE_APPS)). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
+          $base = if ($env:BASE_TAG) { $env:BASE_TAG } else { "nenhuma" }
+          $notes = "Build automatico do instalador. Instalador: $($env:INSTALLER_APP). Modo: $($env:BUILD_MODE) (recompilado: $($env:BUNDLE_APPS); base: $base). Commit: $($env:COMMIT_SHA). Run: $($env:RUN_ID)."
           $ghArgs = @('release','create',$env:RELEASE_TAG) + $assets + @('--repo',$env:GITHUB_REPOSITORY,'--target',$env:COMMIT_SHA,'--title','Ferramentas de Planejamento - ultimo build','--notes',$notes,'--latest')
           gh @ghArgs
           Write-Host "Release publicada: https://github.com/$($env:GITHUB_REPOSITORY)/releases/tag/$($env:RELEASE_TAG)"

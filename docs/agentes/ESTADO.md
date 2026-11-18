@@ -515,3 +515,45 @@ tem self-test, e nenhum dos dois passa pelas funcoes novas.
 **Proposta:** levar o verificador de imports internos para
 `scripts/` e rodar no workflow — e a segunda vez que o `main` de um app
 depende de arquivo nao commitado (a primeira foi o cabo suspeito, 16/11).
+
+## Base publicada — versao de um app so' — 18/11/2026
+
+Pedido do usuario: lancar versao de um app (ex.: Coplan) sem recompilar todos,
+reaproveitando os que nao mudaram, sem aumentar o instalador (~230 MB).
+Decisao `WS-20261118-base-publicada` (DECISOES do workspace): o usuario escolhe
+os apps e o agente mostra o que mudou; instalador completo como hoje; implementar
+**sem build de teste**. Sessao `2026-11-18-160340-claude-ferramentas-planejamento-build-d38691`.
+
+Levantamento: o `rebuild_only` ja existia, com base no `actions/cache` do
+ultimo build completo (cache `bundle-v2-...9a9ea3bf` de 17/11; expira com 7
+dias sem uso, e a base podia ser um build de teste). Nenhuma publicacao o
+usou. Tempos do run `44074387592` (1.3.11): PyInstaller+pip 5m16s, Inno 1m43s.
+
+Branch `feat/base-publicada`:
+- `scripts/bundle_manifest.py` (+ `tests/test_bundle_manifest.py`, 18 testes):
+  `deps-hash`, `normalizar`, `ultima-base`, `fixar`, `gerar`, `pendentes`.
+- `build-installer.yml`: modo decidido pela ultima `base-*`; nao escolhidos
+  fixados no commit publicado; incremental so' com `deps-hash` igual; sem
+  `actions/cache` do bundle; `manifest.json` na release; nao apaga `base-*`;
+  input `completo` (plano B: tudo recompilado, nao escolhidos ainda fixados).
+- `registrar-base.yml` (novo): promove a `latest` a `base-<versao>` se o
+  SHA-256 do instalador for o publicado; guarda as 5 mais novas.
+- `overlay_bundle.ps1` (so' comentario), `README.md`, `docs/PUBLICAR.md`
+  (Parte 1 passo 0 `pendentes`; Parte 2 comandos; Parte 3 passo 7 registrar base).
+
+Validado sem build: testes; parser PowerShell nos blocos do workflow (so' o
+`??` preexistente do passo do Inno e' pwsh 7); `fixar` com clone raso real do
+launcher (b05c83d -> 9bf5d9b); `tar.exe` extraiu o zip da 1.3.11 em 60 s
+(8.004 arquivos); overlay de um Coplan falso sobre a base real -> 5 exes, Coplan
+novo preservado; `gerar` incremental aprovou e reprovou com o Elexplan adulterado;
+`pendentes` contra a base: so' o Coplan tem commits fora (d905f31, 5ffcb6e, bb00c17).
+**Nao validado:** nenhum run do workflow; o caminho incremental do PyInstaller
+no CI nunca rodou. Primeiro uso real: a proxima publicacao.
+
+Semente `base-1.3.11`: zip da release `latest` do run `44074387592` (SHA-256
+`3204a046…aafa8`; instalador da mesma release `bb908add…` = publicado);
+manifesto montado dos commits do run (Coplan `af2c7fe`, Elexplan `a8d7388`,
+Cadastro `4cf739a`, launcher `b05c83d`, build `3da7d91`), `deps_hash`
+`7b4343d0…19b` sobre 18 arquivos. **Enquanto a branch nao entrar no `main`,
+qualquer build pelo workflow do `main` apaga todas as releases, inclusive a
+`base-1.3.11`.**

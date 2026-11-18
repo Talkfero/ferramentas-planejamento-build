@@ -15,6 +15,14 @@ nem "aproveitar" um instalador já gerado: publicar é sempre pedido explícito.
 
 ## Parte 1 — Versão, antes de qualquer build
 
+0. **Escolher quais apps entram** (decisão `WS-20261118-base-publicada`: o
+   usuário escolhe, o agente mostra). Rodar
+   `python scripts/bundle_manifest.py pendentes --fetch`, que lista, por app,
+   os commits do `main` que **não** estão na última base publicada
+   (`base-<versão>`) e avisa se requirements ou dependências do build mudaram.
+   Mostrar a lista ao usuário e perguntar quais entram. Os que não entram ficam
+   **exatamente como na última publicação**, mesmo com commits novos no `main`.
+   Pedido de "todos" ou mudança de dependência → build completo.
 1. Ler a versão publicada de verdade, na rede, não a do repositório:
    `cat "//fs-celpa-02/GEPLP/COPLD/10 - SOFTWARES/Ferramentas de Planejamento/latest.json"`
    Um instalador pode existir no repo e nunca ter sido publicado — foi o caso
@@ -27,7 +35,8 @@ nem "aproveitar" um instalador já gerado: publicar é sempre pedido explícito.
    - Cadastro: `sistemadecadastro/main_web/main_web.py`, `APP_VERSION`
    - Elexplan: `elexplan/elexplan/webui/updates.py`, `APP_VERSION`
    App cuja constante não mudou **mantém** a versão publicada. Não subir versão
-   de app só porque o instalador subiu: são numerações independentes.
+   de app só porque o instalador subiu: são numerações independentes. Só se
+   mexe na versão dos apps escolhidos no passo 0.
 4. Commitar a mudança de versão **antes** do build, para o instalador
    corresponder a um commit.
 
@@ -38,16 +47,28 @@ nem "aproveitar" um instalador já gerado: publicar é sempre pedido explícito.
 os dois gerem o mesmo pacote). Medido em 19/10/2026: GitHub 10 min 48 s + ~35 s
 de download; local 20 min 32 s com o venv pronto e 44 min recriando o venv.
 
-1. Commits de versão já no `main` de cada repo (o workflow clona o `main`).
-2. `gh workflow run build-installer.yml --ref main -f apps=all -f rebuild_only=""`
-   (dispara a release rolling `latest`, que é substituída — efeito externo).
+1. Commits de versão já no `main` dos apps escolhidos (o workflow clona o
+   `main`; os não escolhidos voltam sozinhos ao commit da base).
+2. Disparar o build (dispara a release rolling `latest`, que é substituída —
+   efeito externo):
+   - só alguns apps: `gh workflow run build-installer.yml --ref main -f apps=all -f rebuild_only=coplan_web`
+     (lista separada por vírgula; `-f base=base-X.Y.Z` para fixar outra base);
+   - todos: `gh workflow run build-installer.yml --ref main -f apps=all -f rebuild_only=""`.
+   - **plano B**, se o incremental falhar: repetir com `-f completo=true`.
+     Recompila todos, mas os não escolhidos continuam no commit publicado.
+     Não trocar por `rebuild_only=""`: isso pegaria o `main` de todos os apps.
 3. No log, conferir `[versao] APP_VERSION=<versão>`, os self-tests e
    `[check_bundle_lock] bundle igual ao lock.`. O passo
    "Conferir bibliotecas do bundle contra o lock" derruba o build se algum
    pacote sair fora do `requirements.lock.txt` — até 15/10/2026 o workflow
    não aplicava o lock e o bundle saía com versões não validadas.
+   Com `rebuild_only`, conferir também a linha `[modo]` (`incremental`, ou
+   `full` com o aviso de dependências mudadas), as linhas `[fixar]` e o resumo
+   `[manifesto]`: cada app com commit, build que o compilou e origem.
 4. `gh release download latest --pattern "*Setup-<versão>.exe"` e conferir a
-   versão do arquivo (`VersionInfo`) antes da Parte 3.
+   versão do arquivo (`VersionInfo`) antes da Parte 3. Os `.exe` recompilados
+   saem com a versão do instalador; os reaproveitados da base mantêm a do
+   build que os gerou (está no `manifest.json` da release).
 
 O pacote do GitHub tem, a mais que o local, só DLLs de runtime do Windows do
 Python do runner (UCRT, `mfc140u`, `libcrypto`/`libssl`); texto difere só no
@@ -140,6 +161,18 @@ Nesta ordem, sem pular etapa:
 
 6. **Reler o JSON da rede** e rodar o validador **de novo**, agora contra o
    arquivo publicado. Escrever não é publicar; publicado é o que se lê de volta.
+7. **Registrar a base publicada**, antes de qualquer outro build (o próximo
+   substitui a `latest` e leva o bundle junto):
+
+   ```
+   gh workflow run registrar-base.yml --ref main -f versao=<versão> -f sha256=<sha256 da cópia na rede>
+   ```
+
+   Ele baixa a `latest`, confere que o instalador dela tem **esse** SHA-256 e
+   cria a release `base-<versão>` com `bundle.zip` + `manifest.json`. Conferir
+   o run verde e `gh release view base-<versão>`. Sem este passo, a próxima
+   versão de um app só não tem de onde tirar os outros apps. Instalador
+   parcial (`apps=<um app>`) não vira base: o workflow recusa.
 
 ### Por que o validador existe
 
