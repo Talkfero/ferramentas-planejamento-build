@@ -563,3 +563,48 @@ manifesto dela. A `latest` (1.3.11) continua marcada como Latest.
 Integracao autorizada pelo usuario: `feat/base-publicada` enviada e `main`
 fast-forward `cb567a7..e54dddc` enviado. Nenhum build disparado; `gh workflow
 list` mostra "Build installer" e "Registrar base publicada" ativos.
+
+## Build e publicacao da 1.3.12 — primeiro uso da base publicada — 19/11/2026
+
+Pedido do usuario: *"gerar nova build e publicar"*, "pelo novo jeito". Escolha dele
+(AskUserQuestion): so' o Coplan; Coplan 1.7.0, instalador 1.3.12, `min_version`
+do Coplan = 1.7.0. Sessao `2026-11-18-160340-claude-ferramentas-planejamento-build-d38691`.
+
+`pendentes --fetch`: so' o Coplan tinha commits fora da base (9, de `d905f31` a
+`8ca74b5`); launcher, Elexplan, Cadastro e Unificador iguais a 1.3.11. Verificador
+de imports internos (AST, `git archive`-equivalente sobre `origin/main` do Coplan,
+321 `.py`): 0 sem resolver. Versoes: Coplan `0143da7` (`APP_VERSION` 1.7.0;
+`config.json` pessoal fora do commit), instalador `8e9298b`.
+
+**Primeiro run (`44522243290`) falhou no PyInstaller.** O modo, a base e o
+`fixar` funcionaram (`deps_hash` do CI = o da semente, `7b4343d0…`). Causa:
+`multi_apps.spec` chamava `_collect_all_required("playwright")` sempre, mas o
+resultado so' serve ao Elexplan; no incremental o pip so' instala os requirements
+do Coplan. Correcao `9009313`: coleta so' com `_want('elexplan')` (build completo
+identico). Como o spec entra no `deps_hash`, o hash passou a `c30a38cd…`; **o
+manifesto da `base-1.3.11` foi reenviado com esse hash e uma `deps_hash_nota`**
+(bundle da base inalterado, `bundle.zip` `3204a046…`).
+
+Run `44522864375`, incremental, 4 min 36 s (PyInstaller 1m42s, Inno 1m20s):
+`[modo] incremental`, `APP_VERSION=1.3.12`, overlay 8.004 arquivos (+5.351 da
+base), 5 exes; self-tests Coplan e Elexplan OK; pywebview OK; `check_bundle_lock`
+21/21; manifesto: launcher `b05c83d`, Elexplan `a8d7388`, Unificador `3da7d91` e
+Cadastro `4cf739a` reaproveitados identicos da `base-1.3.11`; Coplan `0143da7`
+recompilado.
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.12 | 1.7.0 | 1.4.0 | 1.6.0 | 227.878.845 | `14ff4d67f36a96e0f85f52933e7b950848d0e7549fc7c3df98620768a45ae8c5` | `latest.json.bak-20261119-093449` |
+
+VersionInfo `1.3.12.0`. Publicacao: copia para a rede 09:31-09:34 com SHA-256 igual
+ao do GitHub; backup; JSON montado do backup (url so troca o nome; diff campo a
+campo: Coplan version/url/sha256/notes/min_version, Cadastro e Elexplan so' url e
+sha256); `check_latest_json.py` exit 0 antes e contra o arquivo relido da rede
+(09:36:53). **Atualizacao obrigatoria so' no Coplan**; Elexplan e Cadastro nao
+mudaram de versao nem de `min_version` (nao recebem aviso). `registrar-base.yml`
+(run `44525686327`): `base-1.3.12` criada com o SHA-256 conferido; releases
+`base-1.3.11` e `base-1.3.12` presentes.
+
+Limites: nenhum app aberto em janela real; so' Coplan e Elexplan tem self-test.
+O `.exe` do Elexplan, Cadastro, launcher e Unificador dentro do 1.3.12 mantem
+`FileVersion` 1.3.11 (vindos da base).
