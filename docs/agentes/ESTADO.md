@@ -608,3 +608,69 @@ mudaram de versao nem de `min_version` (nao recebem aviso). `registrar-base.yml`
 Limites: nenhum app aberto em janela real; so' Coplan e Elexplan tem self-test.
 O `.exe` do Elexplan, Cadastro, launcher e Unificador dentro do 1.3.12 mantem
 `FileVersion` 1.3.11 (vindos da base).
+
+## 1.3.12 com defeito, rollback e 1.3.13 em teste — 19/11/2026
+
+**Defeito:** o Coplan 1.7.0 (instalador 1.3.12) saiu com o pandas quebrado no app
+("partially initialized module 'pandas' has no attribute '_pandas_datetime_CAPI'"):
+Diagnostico do banco, Apoio ("falta ainda nao importado") e Status do plano
+(carregando sem parar). Relato do usuario com print; ficou ~37 min no ar
+(09:36:53-10:14:22).
+
+**Achado (comprovado):** fora o `Coplan Web.exe` e o front-end, o pacote 1.3.12 e'
+identico byte a byte ao da 1.3.11 (8.004 arquivos; pandas, numpy e `*.libs`
+iguais). O `.exe` novo (19.428.280 B contra 21.255.201 B) tem 2.160 modulos no
+PYZ contra 2.451: **perdeu 293** de terceiros/stdlib (cryptography 53, fsspec 49,
+urllib3 36, requests 18, yaml 17, backports 17, bs4, chardet, pytz, html,
+_markupbase…) e ganhou 2 do app. Causa: o build incremental so' instala os
+requirements do app escolhido; o Coplan usa bibliotecas que so' outros apps
+declaram, e a Analysis do PyInstaller as perdeu. **Nao comprovado:** qual
+modulo ausente quebra o pandas (bloquear cada grupo em Python normal nao
+reproduz) nem se a corrida aquecimento x thread do `main_web._aquecer_pandas`
+participa (36 execucoes locais sem erro). O self-test do 1.3.12 passou porque
+nunca importou o pandas (`WS-validacao-so-dois-apps`, ja registrada).
+
+**Rollback (autorizado pelo usuario):** `latest.json` da rede restaurado do
+`latest.json.bak-20261119-093449` as 10:14:22 (instalador 1.3.11, Coplan 1.6.0);
+JSON da 1.3.12 guardado em `latest.json.bak-20261119-101421-v1312`;
+`check_latest_json.py` exit 0. Quem instalou a 1.3.12 segue com o Coplan 1.7.0 ate
+sair a correcao (versao maior que a publicada: nao recebe aviso do 1.6.0).
+`FerramentasCompartilhadas-Setup-1.3.12.exe` ficou na pasta, sem referencia.
+**A `base-1.3.12` esta errada** (Coplan `.exe` quebrado): apagar quando a 1.3.13
+for registrada como base; ate la, um build sem o Coplan reaproveitaria o `.exe`
+ruim.
+
+**Correcao (escolha do usuario: build completo + teste do pandas no CI):**
+- Coplan `cc1d97c`: self-test importa o pandas de verdade (aquecimento + thread
+  com `to_datetime`/`read_sql_query` em uso concorrente, grava o erro original);
+  `APP_VERSION` 1.7.1.
+- Build `c8c2a3f`: `bundle_manifest.py conferir-modulos` (compara o PYZ de cada
+  `.exe` recompilado com o da base; reprova modulo de terceiros/stdlib perdido;
+  22 testes; reprova o `.exe` da 1.3.12 com 293 e aprova base x base) ligado ao
+  workflow; a base e' extraida tambem com `completo=true`; instalador 1.3.13.
+- Run `44532415408` (`rebuild_only=coplan_web completo=true`, 8 min 50 s): modo
+  full, os 4 apps nao escolhidos fixados nos commits da base; `conferir-modulos`
+  OK (Coplan 2.453 modulos = 2.451 da 1.3.11 + 2; launcher 142, Elexplan 1.856,
+  Unificador 1.667, Cadastro 3.175, iguais aos da 1.3.11); self-test do Coplan
+  "pandas em uso concorrente OK"; Elexplan OK; pywebview OK; lock 21/21; manifesto
+  com Coplan `cc1d97c` e os demais nos commits da base.
+  Limite: a trava comparou com a `base-1.3.12`, cujo Coplan e' o quebrado; a
+  conferencia direta contra a 1.3.11 nao foi feita (rede do GitHub caiu duas
+  vezes no zip de 322 MB). O self-test novo **nunca falhou** num `.exe` quebrado
+  (nao ha como rodar o `.exe` da 1.3.12 com o codigo novo).
+
+| Instalador | Coplan | Bytes | SHA-256 |
+|---|---|---|---|
+| 1.3.13 | 1.7.1 | 229.718.050 | `136aa74e035a3d0e7980d1b2fc3035181d785f60c6501e0d830f9b6838905047` |
+
+**Estado: copiado para a rede (SHA-256 da copia igual) e NAO publicado.** Pedido do
+usuario: *"nao publique ainda; vou primeiro instalar eu mesmo"*. `latest.json`
+segue na 1.3.11. Falta, depois do teste dele: backup do `latest.json`, JSON
+(Coplan 1.7.1 com `min_version` a decidir; Cadastro/Elexplan so' url e sha256),
+validador antes e depois, `registrar-base.yml` para a `base-1.3.13` e apagar a
+`base-1.3.12`.
+
+**Pendencia aberta:** o usuario relatou que, no Coplan Web, ao abrir uma obra pelo
+Editar a lista de anos para alterar sumiu. Nao investigado; pode ser o mesmo
+defeito do pandas ou regressao de front-end dos 9 commits novos
+(`15-visualizar-toolbar.js`, `45-diagnostico.js`, `index.html`). Reavaliar na 1.3.13.
