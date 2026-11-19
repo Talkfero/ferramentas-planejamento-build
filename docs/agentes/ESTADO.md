@@ -674,3 +674,52 @@ validador antes e depois, `registrar-base.yml` para a `base-1.3.13` e apagar a
 Editar a lista de anos para alterar sumiu. Nao investigado; pode ser o mesmo
 defeito do pandas ou regressao de front-end dos 9 commits novos
 (`15-visualizar-toolbar.js`, `45-diagnostico.js`, `index.html`). Reavaliar na 1.3.13.
+
+## Build e publicacao da 1.3.14 — Coplan 1.8.0 — 19/11/2026 (tarde)
+
+**Pedido do usuario (17:26): "gerar nova build e publicar".** Depois da 1.3.13
+(commit `cc1d97c`, que ficou so' na rede, **nunca publicada**) o Coplan ganhou 16
+commits do Diagnostico (UI em abas, "Processar anos", "Conferir universos",
+carimbo "sem obra", ambiente do Access, percentual das simulacoes 50/50, GBR fora
+da tensao min/max). A 1.3.13 foi **substituida**, nao publicada: nao havia relato
+do teste dela. `APP_VERSION` do Coplan subiu para **1.8.0** (escolha minha, por
+ser pacote de funcoes; a numeracao e' do app, `ec68761`) e o instalador para
+**1.3.14** (`bac3fdd`; 1.3.13 ja tinha sido gerada).
+
+**Build:** run `44608994774`, `rebuild_only=coplan_web completo=true
+base=base-1.3.11`, 10 min 33 s. **Base explicita `base-1.3.11`** de proposito: a
+`base-1.3.12` tinha o Coplan quebrado, e a trava `conferir-modulos` comparada com
+ela aprovaria qualquer coisa. Os 4 apps nao escolhidos ficaram nos commits da
+1.3.11 (launcher `b05c83d`, Elexplan `a8d7388`, Unificador `3da7d91`, Cadastro
+`4cf739a`). Conferido no log: `[versao] APP_VERSION=1.3.14`; `conferir-modulos`
+**OK contra o Coplan bom da 1.3.11** (Coplan 2.451 -> 2.456 modulos, 0 perdidos;
+os outros 4 iguais); self-test do Coplan "pandas em uso concorrente OK"; lock
+21/21 igual. Isto fecha a lacuna da 1.3.13 (comparacao direta com a 1.3.11).
+Instalador baixado da `latest`: `VersionInfo` 1.3.14.0.
+
+| Instalador | Coplan | Bytes | SHA-256 (da copia na rede) |
+|---|---|---|---|
+| 1.3.14 | 1.8.0 | 229.820.799 | `1585c3a5c202696d9b41ae3cf6554980e30485f0b64eab54357ba2f0084344c2` |
+
+**Publicacao (Parte 3 do PUBLICAR.md):** copia e SHA igual ao do GitHub; backup
+`latest.json.bak-20261119-174458` (era o JSON da 1.3.11); JSON montado desse
+backup trocando so' o nome do instalador; validador **antes** e **depois** da
+releitura da rede, exit 0. Coplan 1.8.0 com `min_version` 1.8.0 (padrao: igual a
+`version`, atualizacao obrigatoria); Cadastro 1.4.0 e Elexplan 1.6.0 so' trocam
+url e sha256. `base-1.3.14` registrada (run `44611931400`, SHA conferido pelo
+workflow); **`base-1.3.12` apagada** (release e tag). Restam as bases 1.3.14 e
+1.3.11; `pendentes` mostra todos os apps iguais a base.
+
+**Nao comprovado / em aberto:**
+- O mecanismo exato da quebra do pandas na 1.3.12 segue desconhecido; a defesa e'
+  a trava de modulos + o self-test com pandas, que passaram, mas o self-test
+  **nunca foi visto falhando** num `.exe` quebrado.
+- A 1.3.14 **nao foi instalada nem aberta por mim**: so' o CI. O teste no app
+  instalado e' do usuario: Diagnostico do banco 2026, Status do plano, Apoio.
+- **"Editar obra" sem a lista de anos (Coplan Web): ainda nao investigado.** Se
+  continuar na 1.8.0, investigar como regressao de front-end.
+- A mudanca 3f363e9 cria tabela nova no banco compartilhado ("sem obra"):
+  colegas em versoes diferentes dividem o mesmo banco ate todos atualizarem
+  (como a atualizacao e' obrigatoria, a janela e' curta).
+- Na pasta da rede continuam `Setup-1.3.12.exe` (o quebrado) e `Setup-1.3.13.exe`,
+  sem referencia no `latest.json`. Nao apaguei: a pasta e' do usuario.
