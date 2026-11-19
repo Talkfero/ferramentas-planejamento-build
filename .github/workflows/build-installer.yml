@@ -172,7 +172,7 @@ jobs:
       # O zip e' o FerramentasCompartilhadas-portable.zip do build publicado.
       # tar do System32 (bsdtar) le zip e e' bem mais rapido que Expand-Archive.
       - name: Baixar o bundle da base
-        if: steps.final_mode.outputs.mode == 'incremental'
+        if: steps.final_mode.outputs.base_tag != ''
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -232,6 +232,18 @@ jobs:
         run: |
           call build_all_shared.bat %APPS_TO_BUILD%
 
+      # Trava contra o defeito do Coplan 1.7.0 (19/11/2026): o build incremental
+      # so' instalou os requirements do Coplan, o .exe dele saiu com 293 modulos
+      # a menos que o da base e o pandas quebrou no app. Compara o PYZ de cada
+      # .exe recompilado com o da base e reprova se faltar biblioteca de
+      # terceiros ou da biblioteca padrao. Roda ANTES do overlay.
+      - name: Conferir modulos dos .exe recompilados contra a base
+        if: steps.final_mode.outputs.base_tag != ''
+        shell: pwsh
+        run: |
+          python .\scripts\bundle_manifest.py conferir-modulos --bundle "${{ env.BUNDLE_DIR }}" --base "${{ env.BUNDLE_BASE_DIR }}" --apps "${{ steps.final_mode.outputs.apps_to_build }}" --root .
+          if ($LASTEXITCODE -ne 0) { throw "Algum .exe perdeu modulos em relacao a base publicada." }
+
       # O recem-compilado vence; da base vem so' o que falta (os .exe e as
       # libs dos apps nao escolhidos). Arquivo que o app escolhido deixou de
       # ter continua vindo da base ate o proximo build completo: os dados de
@@ -242,6 +254,12 @@ jobs:
         shell: pwsh
         run: |
           .\scripts\overlay_bundle.ps1 -Base "${{ env.BUNDLE_BASE_DIR }}" -Fresh "${{ env.BUNDLE_DIR }}"
+          Remove-Item "${{ env.BUNDLE_BASE_DIR }}" -Recurse -Force -ErrorAction SilentlyContinue
+
+      - name: Limpar o bundle da base
+        if: steps.final_mode.outputs.base_tag != ''
+        shell: pwsh
+        run: |
           Remove-Item "${{ env.BUNDLE_BASE_DIR }}" -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Finalize bundle runtime configs

@@ -203,5 +203,28 @@ class FixarTest(_ComBundle):
             bm.fixar(base, ["coplan_web"], self.raiz)
 
 
+class ModulosPerdidosTest(unittest.TestCase):
+    def test_terceiros_e_stdlib_perdidos_reprovam(self):
+        base = {"core", "core.x", "pytz", "pytz.tzinfo", "html", "pandas"}
+        novo = {"core", "core.x", "pandas"}
+        self.assertEqual(bm.modulos_perdidos(base, novo, {"core", "main_web"}), ["html", "pytz", "pytz.tzinfo"])
+
+    def test_codigo_do_app_removido_e_legitimo(self):
+        base = {"core", "core.velho", "backend.api", "pandas"}
+        novo = {"core", "pandas"}
+        self.assertEqual(bm.modulos_perdidos(base, novo, {"core", "backend"}), [])
+
+    def test_modulo_novo_nao_e_problema(self):
+        self.assertEqual(bm.modulos_perdidos({"a"}, {"a", "b"}, set()), [])
+
+    def test_raizes_do_app(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "core").mkdir(); (d / "docs").mkdir(); (d / "main_web.py").write_text("x")
+            (d / "README.md").write_text("x")
+            self.assertEqual(bm.raizes_do_app(d), {"core", "docs", "main_web"})
+        self.assertEqual(bm.raizes_do_app(Path("nao-existe")), set())
+
+
 if __name__ == "__main__":
     unittest.main()

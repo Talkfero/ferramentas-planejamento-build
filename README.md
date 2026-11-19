@@ -133,6 +133,12 @@ Consequencias que valem saber:
 - Arquivo que o app recompilado deixou de ter continua vindo da base ate o
   proximo build completo: dados de apps diferentes dividem pastas do
   `_internal`, entao nao da para limpar "as pastas do app" com seguranca.
+- **Trava `conferir-modulos`:** depois do PyInstaller, o workflow compara o PYZ
+  de cada `.exe` recompilado com o da base e reprova se faltar biblioteca de
+  terceiros ou da biblioteca padrao. Nasceu do Coplan 1.7.0 (19/11/2026): o
+  incremental so' instala os requirements do app escolhido, o `.exe` saiu com
+  293 modulos a menos e o pandas quebrou no app, com o self-test verde. Se
+  reprovar, use `completo=true`.
 - Antes do build, `python scripts/bundle_manifest.py pendentes --fetch` lista,
   por app, os commits do `main` que nao estao na ultima base, e avisa quando
   requirements ou dependencias do build mudaram (o que forca build completo).

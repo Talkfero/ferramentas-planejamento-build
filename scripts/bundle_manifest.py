@@ -22,6 +22,9 @@ Subcomandos (so' biblioteca padrao: roda antes do venv do build):
     ultima-base  imprime a tag ``base-*`` mais nova da release (via ``gh``)
     fixar        volta os apps nao escolhidos ao commit da base
     gerar        escreve o ``manifest.json`` do bundle montado
+    conferir-modulos
+                 reprova um .exe recompilado que perdeu modulos de terceiros
+                 ou da biblioteca padrao em relacao ao .exe da base
     pendentes    (local) lista os commits de cada app ainda nao publicados
 """
 
@@ -284,6 +287,68 @@ def gerar(
     }
 
 
+# ---------------------------------------------------------------------------
+# conferir-modulos
+# ---------------------------------------------------------------------------
+def modulos_do_exe(exe: Path) -> set[str]:
+    """Nomes dos modulos Python dentro do PYZ de um .exe do PyInstaller."""
+    try:
+        from PyInstaller.archive.readers import CArchiveReader, ZlibArchiveReader
+    except ImportError as exc:  # pragma: no cover - ambiente sem PyInstaller
+        raise SystemExit(
+            f"[conferir-modulos] PyInstaller indisponivel ({exc}); a conferencia "
+            "nao pode rodar e o build nao deve ser publicado sem ela."
+        ) from exc
+    ar = CArchiveReader(str(exe))
+    inicio = getattr(ar, "_start_offset", 0)
+    nomes: set[str] = set()
+    for nome, (off, _dlen, _ulen, _flag, tipo) in ar.toc.items():
+        if tipo == "z" or nome.endswith(".pyz"):
+            nomes |= set(ZlibArchiveReader(str(exe), start_offset=inicio + off).toc.keys())
+    return nomes
+
+
+def raizes_do_app(pasta: Path) -> set[str]:
+    """Pacotes/modulos de primeira parte: o que fica na raiz do clone do app."""
+    if not pasta.is_dir():
+        return set()
+    return {p.stem if p.is_file() else p.name for p in pasta.iterdir()
+            if p.is_dir() or p.suffix == ".py"}
+
+
+def modulos_perdidos(base: set[str], novo: set[str], primeira_parte: set[str]) -> list[str]:
+    """Modulos que a base tinha e o novo nao, exceto os do proprio app.
+
+    Codigo do app que saiu do repo e' mudanca legitima. Biblioteca de terceiros
+    ou da biblioteca padrao que sumiu NAO e': foi o caso do Coplan 1.7.0, que
+    saiu com 293 modulos a menos porque o build incremental so' instalou os
+    requirements dele (19/11/2026).
+    """
+    return sorted(m for m in base - novo if m.split(".")[0] not in primeira_parte)
+
+
+def conferir_modulos(bundle: Path, base: Path, chaves: list[str], raiz: Path) -> list[str]:
+    erros: list[str] = []
+    for chave in chaves:
+        app = APPS[chave]
+        exe_novo, exe_base = bundle / app.exe, base / app.exe
+        if not exe_novo.is_file() or not exe_base.is_file():
+            erros.append(f"{chave}: .exe ausente (novo={exe_novo.is_file()}, base={exe_base.is_file()})")
+            continue
+        mb, mn = modulos_do_exe(exe_base), modulos_do_exe(exe_novo)
+        perdidos = modulos_perdidos(mb, mn, raizes_do_app(raiz / app.pasta))
+        print(f"[conferir-modulos] {chave}: base {len(mb)} modulos, novo {len(mn)}, "
+              f"perdidos de terceiros/stdlib {len(perdidos)}")
+        if perdidos:
+            raizes = sorted({m.split(".")[0] for m in perdidos})
+            erros.append(
+                f"{chave}: o .exe perdeu {len(perdidos)} modulo(s) em relacao a base "
+                f"({', '.join(raizes[:15])}{'...' if len(raizes) > 15 else ''}). "
+                "O ambiente do build nao tem as bibliotecas que a base tinha."
+            )
+    return erros
+
+
 def imprimir_resumo(m: dict) -> None:
     print(f"[manifesto] instalador {m['versao_instalador']} | modo {m['modo']} | base {m['base'] or '-'}")
     for chave, e in m["apps"].items():
@@ -392,6 +457,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--base-tag", default="")
     p.add_argument("--saida", type=Path, required=True)
 
+    p = sub.add_parser("conferir-modulos")
+    p.add_argument("--bundle", type=Path, required=True)
+    p.add_argument("--base", type=Path, required=True)
+    p.add_argument("--apps", required=True)
+    p.add_argument("--root", type=Path, default=Path("."))
+
     p = sub.add_parser("pendentes")
     p.add_argument("--manifest", type=Path, help="manifest.json local; sem isto baixa o da ultima base")
     p.add_argument("--repo", default=REPO_PADRAO)
@@ -417,6 +488,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         a.saida.write_text(json.dumps(m, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         imprimir_resumo(m)
+    elif a.cmd == "conferir-modulos":
+        erros = conferir_modulos(a.bundle, a.base, normalizar(a.apps), a.root.resolve())
+        if erros:
+            raise SystemExit("[conferir-modulos] REPROVADO:\n  - " + "\n  - ".join(erros))
+        print("[conferir-modulos] OK: nenhum .exe perdeu modulos em relacao a base.")
     elif a.cmd == "pendentes":
         if a.manifest:
             base = carregar_manifesto(a.manifest)

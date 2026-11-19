@@ -54,7 +54,12 @@ de download; local 20 min 32 s com o venv pronto e 44 min recriando o venv.
    - só alguns apps: `gh workflow run build-installer.yml --ref main -f apps=all -f rebuild_only=coplan_web`
      (lista separada por vírgula; `-f base=base-X.Y.Z` para fixar outra base);
    - todos: `gh workflow run build-installer.yml --ref main -f apps=all -f rebuild_only=""`.
-   - **plano B**, se o incremental falhar: repetir com `-f completo=true`.
+   - **`completo=true`** recompila todos os apps (cada um no commit da base) e
+     é o caminho a usar quando o app escolhido depende de bibliotecas que só
+     outro app declara: o incremental instala só os requirements do escolhido
+     e o `.exe` sai sem elas (Coplan 1.7.0, 19/11/2026). A trava
+     `conferir-modulos` do workflow reprova esse caso; se reprovar, repetir
+     com `completo=true`. Também serve de plano B se o incremental falhar.
      Recompila todos, mas os não escolhidos continuam no commit publicado.
      Não trocar por `rebuild_only=""`: isso pegaria o `main` de todos os apps.
 3. No log, conferir `[versao] APP_VERSION=<versão>`, os self-tests e
