@@ -358,9 +358,16 @@ CADASTRO_EXTRA_DATAS, CADASTRO_EXTRA_BINARIES, CADASTRO_EXTRA_HIDDEN = _collect_
     "snowflake",
 )
 
-PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_required(
-    "playwright"
-)
+# So' o Elexplan usa estes extras (PIM). Coletar fora dele derrubava o build
+# incremental de OUTRO app (19/11/2026, primeiro uso da base publicada): o pip
+# do incremental so' instala os requirements dos apps recompilados, e o
+# playwright e' do Elexplan. Em build completo o resultado e' o mesmo.
+if _want('elexplan'):
+    PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = _collect_all_required(
+        "playwright"
+    )
+else:
+    PIM_EXTRA_DATAS, PIM_EXTRA_BINARIES, PIM_EXTRA_HIDDEN = [], [], []
 PIM_EXTRA_DATAS = [
     item for item in PIM_EXTRA_DATAS
     if ".local-browsers" not in str(item[0]).replace("\\", "/")
