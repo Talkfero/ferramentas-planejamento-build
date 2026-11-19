@@ -61,6 +61,10 @@ de download; local 20 min 32 s com o venv pronto e 44 min recriando o venv.
      `conferir-modulos` do workflow reprova esse caso; se reprovar, repetir
      com `completo=true`. Também serve de plano B se o incremental falhar.
      Recompila todos, mas os não escolhidos continuam no commit publicado.
+     Se a última base for suspeita (publicada e depois revertida, como a
+     `base-1.3.12`), passar `-f base=<última base boa>`: a trava compara o PYZ
+     contra ela, e contra uma base com `.exe` quebrado aprovaria tudo. Apagar a
+     base ruim (`gh release delete base-X --cleanup-tag --yes`).
      Não trocar por `rebuild_only=""`: isso pegaria o `main` de todos os apps.
 3. No log, conferir `[versao] APP_VERSION=<versão>`, os self-tests e
    `[check_bundle_lock] bundle igual ao lock.`. O passo
