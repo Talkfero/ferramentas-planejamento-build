@@ -723,3 +723,40 @@ workflow); **`base-1.3.12` apagada** (release e tag). Restam as bases 1.3.14 e
   (como a atualizacao e' obrigatoria, a janela e' curta).
 - Na pasta da rede continuam `Setup-1.3.12.exe` (o quebrado) e `Setup-1.3.13.exe`,
   sem referencia no `latest.json`. Nao apaguei: a pasta e' do usuario.
+
+## Build e publicacao da 1.3.15 — Coplan 1.9.0, Elexplan 1.7.0 — 27/11/2026
+
+Pedido do usuario: *"gerar nova build e publicar"*. Sessao
+`2026-11-27-142948-claude-ferramentas-planejamento-build-2aa94c`. `pendentes --fetch`
+mostrou launcher/unificador/cadastro iguais a base-1.3.14; Coplan com 37 commits e
+Elexplan com 6 fora da base. Escolha do usuario (AskUserQuestion): so' Coplan e
+Elexplan entram; bump MINOR confirmado nos dois.
+
+Versoes: Coplan `d6973f6` 1.8.0->1.9.0; Elexplan `d5fcda7` 1.6.0->1.7.0; instalador
+`46e75d5` 1.3.14->1.3.15. Push dos tres sem bloqueio.
+
+**Primeiro run (`46043861030`) reprovado em `conferir-modulos`**, mesmo padrao da
+1.3.12: incremental (`rebuild_only=coplan_web,elexplan`) instalou so' os requirements
+desses dois apps e os `.exe` perderam ~292-298 modulos de terceiros/stdlib
+(OpenSSL, cryptography, botocore, bs4 etc., que so' outros apps declaram).
+Corrigido com `completo=true` (mesmo `rebuild_only`, base-1.3.14 nao suspeita):
+run `46044486981`, `[modo] full`, 8min; `conferir-modulos` OK (0 perdidos nos 5
+apps); self-tests Coplan ("pandas em uso concorrente OK") e Elexplan ("Playwright
+e driver disponiveis") OK; `check_bundle_lock` 21/21. Instalador baixado da
+`latest`: VersionInfo `1.3.15.0`.
+
+| Instalador | Coplan | Cadastro | Elexplan | Bytes | SHA-256 | Backup do `latest.json` |
+|---|---|---|---|---|---|---|
+| 1.3.15 | 1.9.0 | 1.4.0 | 1.7.0 | 230.320.313 | `a03c3f9dd5f6adeafd87d5e3ed0dd9a92e56d0a12c7ef53b3beb6a4e49236d7e` | `latest.json.bak-20261127-150205` |
+
+Publicacao: copia para a rede com SHA-256 da copia igual ao do GitHub; backup;
+JSON montado do backup (Cadastro so' troca url/sha256, sem mudar de versao; Coplan
+e Elexplan tambem version/notes/min_version); diff campo a campo conferido;
+`check_latest_json.py` exit 0 antes de publicar e de novo contra o relido da rede.
+**Atualizacao obrigatoria no Coplan e no Elexplan** (`min_version` = `version`);
+Cadastro sem mudanca de versao. `registrar-base.yml` (run `46046699056`):
+`base-1.3.15` criada e conferida; bases `1.3.11`, `1.3.14` e `1.3.15` presentes.
+
+**Nao verificado nesta sessao:** nenhum app aberto em janela real (so' os
+self-tests do CI); pendencia "Editar obra sem lista de anos" (Coplan Web,
+relatada em 19/11) continua sem investigar, agora na 1.9.0.
